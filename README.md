@@ -5,6 +5,15 @@ while sacrificing a bit of flexibility.
 
 Documentation to come. See docs of trait-enumizer, and examples here for now.
 
+## Differences to trait-enumizer:
+ - ctrlgen only supports inherent impls, it will not enumize traits.
+ - ctrlgen prefers generating impls of traits over generating "magic" functions, to
+   make it more transparent to the user what is done. For example, the call function
+   is implemented by implementing the `CallMut` trait on the enum.
+ - ctrlgen tries to minimize and simplify the argument syntax, at the cost of some configurability.
+   For example, the call trait will always be implemented.
+ - ctrlgen requires the nightly rust channel for (amongst other things) GATs
+
 ## Example
 
 ```rust

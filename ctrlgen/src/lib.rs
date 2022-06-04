@@ -1,5 +1,6 @@
 #![feature(try_trait_v2, generic_associated_types, type_alias_impl_trait)]
 pub mod promise;
+pub mod returnval;
 
 pub use ctrlgen_derive::ctrlgen;
 
@@ -51,3 +52,4 @@ pub trait CallMutAsync<Service> {
     type Future: core::future::Future;
     fn call_mut_async(self, service: &mut Service) -> Self::Future;
 }
+

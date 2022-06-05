@@ -61,14 +61,10 @@ pub(crate) fn parse_args(input: TokenStream) -> Params {
                 TokenTree::Punct(_) => panic!("No punctuation is expected here"),
                 TokenTree::Literal(_) => panic!("No literal is expected here"),
             },
-            ExpectingIdent(Returnval) => {
-                match x {
-                    TokenTree::Punct(y) if y.as_char() == ',' => {
-                        state = ExpectingNewParam
-                    }
-                    x => returnval.append(x),
-                }
-            }
+            ExpectingIdent(Returnval) => match x {
+                TokenTree::Punct(y) if y.as_char() == ',' => state = ExpectingNewParam,
+                x => returnval.append(x),
+            },
             ExpectingIdent(t) => {
                 match x {
                     TokenTree::Ident(y) => match t {
@@ -103,7 +99,7 @@ pub(crate) fn parse_args(input: TokenStream) -> Params {
     let returnval = if returnval.is_empty() {
         None
     } else {
-        Some(returnval)
+        Some(syn::parse(returnval.into()).unwrap())
     };
 
     Params {

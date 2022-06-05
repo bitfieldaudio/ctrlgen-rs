@@ -5,7 +5,7 @@ use crate::{Argument, Method, Params};
 use super::{InputData, ReceiverStyle};
 impl InputData {
     pub(crate) fn parse_inherent_impl(item: &mut syn::ItemImpl, params: Params) -> InputData {
-        let returnval_mode = true;
+        let returnval_mode = params.returnval.is_some();
 
         if item.defaultness.is_some() {
             panic!("Default impls not supported");
@@ -13,26 +13,20 @@ impl InputData {
         if item.unsafety.is_some() {
             panic!("Handling `unsafe` is not implemented");
         }
-        if !item.generics.params.is_empty() {
-            panic!("Generics are not supported");
-        }
-        if item.generics.where_clause.is_some() {
-            panic!("where clauses are not supported");
-        }
         if item.trait_.is_some() {
             panic!("Trait impls are not supported, only inherent impls");
         }
-        let name = match &*item.self_ty {
+        let generics = item.generics.clone();
+        let (name, struct_args) = match &*item.self_ty {
             syn::Type::Path(p) => {
                 if p.qself.is_some() {
                     panic!("Impl has some tricky type. This is not supported");
                 }
-                match p.path.get_ident() {
-                    Some(x) => x.clone(),
-                    None => {
-                        panic!("Impl type must be a single ident without paths. `use` it instead.")
-                    }
+                if p.path.segments.len() != 1 {
+                    panic!("Impl type must be a single ident with optional arguments")
                 }
+                let segment = p.path.segments[0].clone();
+                (segment.ident, segment.arguments)
             }
             _ => panic!(
                 "Type for `impl` should be a simple identifier without any paths or other tricks."
@@ -61,6 +55,8 @@ impl InputData {
 
         InputData {
             name,
+            generics,
+            struct_args,
             methods,
             params,
         }

@@ -61,6 +61,8 @@ impl std::fmt::Debug for Method {
 struct InputData {
     /// Inherent impl name.
     name: Ident,
+    generics: syn::Generics,
+    struct_args: syn::PathArguments,
     methods: Vec<Method>,
     params: Params,
 }
@@ -90,7 +92,7 @@ impl AccessMode {
 
 struct Params {
     access_mode: AccessMode,
-    returnval: Option<proc_macro2::TokenStream>,
+    returnval: Option<syn::Type>,
     proxy: Option<proc_macro2::Ident>,
     enum_attr: Vec<proc_macro2::Group>,
     enum_name: Ident,

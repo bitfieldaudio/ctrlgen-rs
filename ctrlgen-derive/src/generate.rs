@@ -1,5 +1,6 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote as q;
+use syn::{WhereClause, Token, punctuated::Punctuated, parse_quote};
 
 #[cfg(feature = "std")]
 fn borrow_toowned() -> TokenStream {
@@ -16,6 +17,19 @@ fn borrow_toowned() -> TokenStream {
 
 use super::InputData;
 impl InputData {
+    pub(crate) fn make_where_clause(&self) -> WhereClause {
+        let mut where_clause = self.generics.where_clause.clone().unwrap_or_else(|| WhereClause {
+            where_token: <Token![where]>::default(),
+            predicates: Punctuated::new(),
+        });
+        if let Some(returnval_trait) = self.params.returnval.as_ref() {
+            where_clause.predicates.push(parse_quote! {
+                #returnval_trait : ::ctrlgen::Returnval
+            })
+        }
+        where_clause
+    }
+
     pub(crate) fn generate_enum(&self, out: &mut TokenStream) {
         let returnval_handler = self.params.returnval.as_ref();
         let custom_attrs = &self.params.enum_attr[..];
@@ -78,12 +92,13 @@ impl InputData {
         for ca in custom_attrs {
             customattrs.extend(q! {# #ca});
         }
-        let mut maybe_where = TokenStream::new();
-        if let Some(returnval_trait) = returnval_handler {
-            maybe_where = q! {
+        let maybe_where = if let Some(returnval_trait) = returnval_handler {
+            q! {
                 where #returnval_trait : ::ctrlgen::Returnval
             }
-        }
+        } else {
+            Default::default()
+        };
         out.extend(q! {
             #customattrs
             #pub_or_priv enum #enum_name
@@ -155,21 +170,17 @@ impl InputData {
             })
         }
 
-        let maybe_where = if let Some(returnval_trait) = returnval_handler {
-            q! {
-                where #returnval_trait : ::ctrlgen::Returnval
-            }
-        } else {
-            Default::default()
-        };
+        let (impl_generics, _, _) = &self.generics.split_for_impl();
+        let struct_args = &self.struct_args;
+        let where_clause = self.make_where_clause();
 
         if !is_async {
             out.extend(q! {
-                impl ::ctrlgen::CallMut<#struct_name> for #enum_name
-                #maybe_where
+                impl #impl_generics ::ctrlgen::CallMut < #struct_name #struct_args > for #enum_name
+                #where_clause
                 {
                     type Output = #output_type;
-                    fn call_mut(self, this: &mut #struct_name) -> Self::Output {
+                    fn call_mut(self, this: &mut #struct_name #struct_args) -> Self::Output {
                         match self {
                             #cases
                         }
@@ -178,12 +189,12 @@ impl InputData {
             });
         } else {
             out.extend(q! {
-                impl ::ctrlgen::CallMutAsync<#struct_name> for #enum_name
-                #maybe_where
+                impl #impl_generics ::ctrlgen::CallMutAsync < #struct_name #struct_args > for #enum_name
+                #where_clause
                 {
                     type Future<'a> = impl core::future::Future<Output = #output_type> + 'a
-                        where #struct_name: 'a;
-                    fn call_mut_async(self, this: &mut #struct_name) -> Self::Future<'_> {
+                        where #struct_name #struct_args: 'a;
+                    fn call_mut_async(self, this: &mut #struct_name #struct_args) -> Self::Future<'_> {
                         async {
                             match self {
                                 #cases

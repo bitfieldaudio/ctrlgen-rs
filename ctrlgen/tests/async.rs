@@ -1,8 +1,6 @@
 #![feature(generic_associated_types, type_alias_impl_trait)]
-use std::cell::RefCell;
-
 use ctrlgen::returnval::LocalRetval;
-use ctrlgen::CallMut;
+use ctrlgen::CallMutAsync;
 
 #[derive(Default)]
 struct Service {
@@ -20,7 +18,7 @@ impl Service {
         self.counter
     }
 
-    pub fn set_flag(&mut self, flag: bool) {
+    pub async fn set_flag(&mut self, flag: bool) {
         self.flag = flag;
     }
 }
@@ -66,38 +64,17 @@ impl Service {
 //     }
 // }
 
-#[test]
-fn call_mut_works() {
+#[tokio::test]
+async fn call_mut_works() {
     let mut service = Service {
         counter: 0,
         flag: false,
     };
     let msg = ServiceMsg::SetFlag { flag: true };
-    msg.call_mut(&mut service).unwrap();
+    msg.call_mut_async(&mut service).await.unwrap();
 
     assert!(service.flag)
 }
-
-#[test]
-fn proxy() {
-    let service = RefCell::new(Service {
-        counter: 0,
-        flag: false,
-    });
-
-    let msg = ServiceMsg::SetFlag { flag: true };
-    msg.call_mut(&mut *service.borrow_mut()).unwrap();
-
-    // With proxy:
-    let proxy = ServiceProxy::new(|msg: ServiceMsg| {
-        msg.call_mut(&mut *service.borrow_mut()).unwrap();
-    });
-
-    let ret = proxy.increment_by(2);
-    assert_eq!(*ret.borrow(), Some(2));
-    assert_eq!(service.borrow().counter, 2);
-}
-
 // impl CallMutAsync<Service> for ServiceMsg
 // where
 //     TokioRetval: AsyncReturnval,

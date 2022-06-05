@@ -1,4 +1,3 @@
-use convert_case::Casing;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote as q;
 
@@ -15,7 +14,7 @@ fn borrow_toowned() -> TokenStream {
     panic!("Cannot use borrow::ToOwned without either `std` or `alloc` features of ctrlgen")
 }
 
-use super::{InputData, ReceiverStyle};
+use super::InputData;
 impl InputData {
     pub(crate) fn generate_enum(&self, out: &mut TokenStream) {
         let returnval_handler = self.params.returnval.as_ref();
@@ -99,7 +98,8 @@ impl InputData {
         let returnval_handler = self.params.returnval.as_ref();
         let struct_name = &self.name;
         let enum_name = &self.params.enum_name;
-
+        let is_async = self.has_async_functions();
+        
         let output_type = if let Some(returnval_trait) = returnval_handler {
             q! {
                 core::result::Result<(), <#returnval_trait as ::ctrlgen::Returnval>::SendError>
@@ -107,7 +107,7 @@ impl InputData {
         } else {
             q! { () }
         };
-        let output_ok = if let Some(returnval_trait) = returnval_handler {
+        let output_ok = if returnval_handler.is_some() {
             q! {
                 Ok(())
             }
@@ -129,15 +129,21 @@ impl InputData {
             }
             let call_args = args.clone();
 
+            let func_call = if method.r#async {
+                q! { this.#method_name(#call_args).await }
+            } else {
+                q! { this.#method_name(#call_args) }
+            };
+
             let mut body = TokenStream::new();
-            if let (Some(ret), Some(returnval_trait)) = (&method.ret, returnval_handler) {
+            if let (Some(_), Some(returnval_trait)) = (&method.ret, returnval_handler) {
                 args.extend(q! { ret, });
                 body.extend(q! {
-                    <#returnval_trait as ::ctrlgen::Returnval>::send(ret, this.#method_name(#call_args))
+                    <#returnval_trait as ::ctrlgen::Returnval>::send(ret, #func_call)
                 });
             } else {
                 body.extend(q! {
-                    this.#method_name(#call_args);
+                    #func_call;
                     #output_ok
                 });
             }
@@ -149,7 +155,7 @@ impl InputData {
             })
         }
 
-        let mut maybe_where = if let Some(returnval_trait) = returnval_handler {
+        let maybe_where = if let Some(returnval_trait) = returnval_handler {
             q! {
                 where #returnval_trait : ::ctrlgen::Returnval
             }
@@ -157,18 +163,36 @@ impl InputData {
             Default::default()
         };
 
-        out.extend(q! {
-            impl ::ctrlgen::CallMut<#struct_name> for #enum_name
-            #maybe_where
-            {
-                type Output = #output_type;
-                fn call_mut(self, this: &mut #struct_name) -> Self::Output {
-                    match self {
-                        #cases
+        if !is_async {
+            out.extend(q! {
+                impl ::ctrlgen::CallMut<#struct_name> for #enum_name
+                #maybe_where
+                {
+                    type Output = #output_type;
+                    fn call_mut(self, this: &mut #struct_name) -> Self::Output {
+                        match self {
+                            #cases
+                        }
                     }
                 }
-            }
-        });
+            });
+        } else {
+            out.extend(q! {
+                impl ::ctrlgen::CallMutAsync<#struct_name> for #enum_name
+                #maybe_where
+                {
+                    type Future<'a> = impl core::future::Future<Output = #output_type> + 'a
+                        where #struct_name: 'a;
+                    fn call_mut_async(self, this: &mut #struct_name) -> Self::Future<'_> {
+                        async {
+                            match self {
+                                #cases
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 
     pub(crate) fn generate_proxy(&self, out: &mut TokenStream, proxy_name: &Ident) {
@@ -211,7 +235,7 @@ impl InputData {
                 })
             }
         }
-        let mut maybe_where = if let Some(returnval_trait) = returnval_handler {
+        let maybe_where = if let Some(returnval_trait) = returnval_handler {
             q! {
                 where #returnval_trait : ::ctrlgen::Returnval
             }

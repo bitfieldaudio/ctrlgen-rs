@@ -2,7 +2,6 @@ use proc_macro2::TokenStream;
 use proc_macro2::TokenTree;
 
 use crate::AccessMode;
-use crate::ReceiverStyle;
 
 use super::Params;
 enum ParserState<I, G> {
@@ -16,7 +15,6 @@ enum ParserState<I, G> {
 #[derive(Debug, Clone, Copy)]
 enum RootLevelIdentAssignmentTargets {
     Returnval,
-    Name,
     Proxy,
 }
 #[derive(Debug, Clone, Copy)]
@@ -43,7 +41,7 @@ pub(crate) fn parse_args(input: TokenStream) -> Params {
                 TokenTree::Ident(y) => match y.to_string().as_str() {
                     "pub" => access_mode = AccessMode::Pub,
                     "pub_crate" => access_mode = AccessMode::PubCrate,
-                    z => {
+                    _ => {
                         enum_name = Some(y);
                         state = ExpectingNewParam;
                     }
@@ -66,7 +64,6 @@ pub(crate) fn parse_args(input: TokenStream) -> Params {
                 match x {
                     TokenTree::Ident(y) => match t {
                         Returnval => returnval = Some(y),
-                        Name => enum_name = Some(y),
                         Proxy => proxy = Some(y),
                     },
                     _ => panic!(

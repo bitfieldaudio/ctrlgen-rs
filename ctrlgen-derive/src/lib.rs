@@ -1,7 +1,7 @@
 use convert_case::Casing;
 use proc_macro2::TokenStream;
-use syn::Ident;
 use quote::quote as q;
+use syn::Ident;
 
 struct Argument {
     name: Ident,
@@ -65,6 +65,12 @@ struct InputData {
     params: Params,
 }
 
+impl InputData {
+    fn has_async_functions(&self) -> bool {
+        self.methods.iter().any(|x| x.r#async)
+    }
+}
+
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 enum AccessMode {
     Priv,
@@ -75,11 +81,11 @@ enum AccessMode {
 impl AccessMode {
     pub(crate) fn code(self) -> TokenStream {
         match self {
-            AccessMode::Priv => q!{},
-            AccessMode::Pub => q!{pub},
-            AccessMode::PubCrate => q!{pub(crate)},
+            AccessMode::Priv => q! {},
+            AccessMode::Pub => q! {pub},
+            AccessMode::PubCrate => q! {pub(crate)},
         }
-    } 
+    }
 }
 
 struct Params {
@@ -119,7 +125,6 @@ pub fn ctrlgen(
     if let Some(proxy) = &params.proxy {
         input_data.generate_proxy(&mut ret, proxy);
     }
-
 
     ret.into()
 }

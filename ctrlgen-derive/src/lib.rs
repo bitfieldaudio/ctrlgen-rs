@@ -90,7 +90,7 @@ impl AccessMode {
 
 struct Params {
     access_mode: AccessMode,
-    returnval: Option<proc_macro2::Ident>,
+    returnval: Option<proc_macro2::TokenStream>,
     proxy: Option<proc_macro2::Ident>,
     enum_attr: Vec<proc_macro2::Group>,
     enum_name: Ident,

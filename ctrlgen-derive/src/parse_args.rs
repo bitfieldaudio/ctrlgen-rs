@@ -1,5 +1,6 @@
 use proc_macro2::TokenStream;
 use proc_macro2::TokenTree;
+use quote::TokenStreamExt;
 
 use crate::AccessMode;
 
@@ -25,7 +26,7 @@ enum RootLevelGroupAssignmentTargets {
 pub(crate) fn parse_args(input: TokenStream) -> Params {
     let mut proxy = None;
     let mut access_mode = AccessMode::Priv;
-    let mut returnval = None;
+    let mut returnval = TokenStream::new();
     let mut enum_attr = vec![];
     let mut enum_name = None;
 
@@ -60,10 +61,18 @@ pub(crate) fn parse_args(input: TokenStream) -> Params {
                 TokenTree::Punct(_) => panic!("No punctuation is expected here"),
                 TokenTree::Literal(_) => panic!("No literal is expected here"),
             },
+            ExpectingIdent(Returnval) => {
+                match x {
+                    TokenTree::Punct(y) if y.as_char() == ',' => {
+                        state = ExpectingNewParam
+                    }
+                    x => returnval.append(x),
+                }
+            }
             ExpectingIdent(t) => {
                 match x {
                     TokenTree::Ident(y) => match t {
-                        Returnval => returnval = Some(y),
+                        Returnval => unreachable!(),
                         Proxy => proxy = Some(y),
                     },
                     _ => panic!(
@@ -90,6 +99,12 @@ pub(crate) fn parse_args(input: TokenStream) -> Params {
     }
 
     let enum_name = enum_name.expect("`name` parameter is required.");
+
+    let returnval = if returnval.is_empty() {
+        None
+    } else {
+        Some(returnval)
+    };
 
     Params {
         proxy,

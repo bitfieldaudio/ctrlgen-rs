@@ -1,4 +1,5 @@
 use proc_macro2::TokenTree;
+use syn::{parse_quote, Attribute};
 
 use crate::{Argument, Method, Params};
 
@@ -71,6 +72,7 @@ fn parse_method(
 ) {
     let mut enum_attr = vec![];
     let mut return_attr = vec![];
+    let mut doc_attr = vec![];
     if method_signature.constness.is_some() {
         panic!("ctrlgen does not support const");
     }
@@ -98,12 +100,17 @@ fn parse_method(
                     panic!("Input of `ctrlgen_{{enum|return}}_attr` should be single [...] group")
                 }
             };
+            let attr: Attribute = parse_quote! { # #g };
             match x {
-                x if x == "ctrlgen_enum_attr" => enum_attr.push(g),
-                x if x == "ctrlgen_return_attr" => return_attr.push(g),
+                x if x == "ctrlgen_enum_attr" => enum_attr.push(attr),
+                x if x == "ctrlgen_return_attr" => return_attr.push(attr),
                 _ => unreachable!(),
             }
             false
+        }
+        Some(x) if x == "doc" => {
+            doc_attr.push(a.clone());
+            true
         }
         _ => true,
     });
@@ -180,6 +187,7 @@ fn parse_method(
         ret,
         enum_attr,
         return_attr,
+        doc_attr,
         r#async,
     };
     methods.push(method);

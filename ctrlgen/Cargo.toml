@@ -2,6 +2,7 @@
 name = "ctrlgen"
 version = "0.1.0"
 edition = "2021"
+include = ["src", "Cargo.toml", "tests", "README.md"]
 
 [dependencies]
 tokio = { version = "1.17", features=["sync", "rt", "macros"] }

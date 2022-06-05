@@ -25,7 +25,7 @@ so i implemented the features i needed instead.
 
 ## Example
 
-```rust
+```rust,ignore
 struct Service<T: From<i32>> {
     counter: T,
 }
@@ -44,7 +44,7 @@ impl Service {
 
 This will generate the following code:
 
-```rust
+```rust,ignore
 pub enum ServiceMsg
 where TokioRetval: ::ctrlgen::Returnval,
 {
@@ -92,7 +92,7 @@ By setting the `returnval = <Trait>` parameter, you configure the channel over w
 
 Example Implementation:
 
-```rust
+```rust,ignore
 pub struct FailedToSendRetVal;
 pub struct TokioRetval;
 impl Returnval for TokioRetval {

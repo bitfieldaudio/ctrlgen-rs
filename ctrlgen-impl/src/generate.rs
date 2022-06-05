@@ -39,6 +39,7 @@ impl InputData {
         for method in &self.methods {
             let variant_name = method.variant_name();
             let mut variant_params = TokenStream::new();
+            let doc_attr = &method.doc_attr;
             for arg in &method.args {
                 let argument_name = &arg.name;
                 let argument_type = if !arg.to_owned {
@@ -79,18 +80,13 @@ impl InputData {
                     panic!("`ctrlgen_return_attr[]` used in method without a return type. Add `-> ()` to force using the return channel.");
                 }
             }
-            let mut custom_attributes = TokenStream::new();
-            for aa in &method.enum_attr {
-                custom_attributes.extend(q! {# #aa});
-            }
+            let custom_attributes = &method.enum_attr;
 
             variants.extend(q! {
-                #custom_attributes #variant_name { #variant_params },
+                #(#doc_attr)*
+                #(#custom_attributes)* 
+                #variant_name { #variant_params },
             });
-        }
-        let mut customattrs = TokenStream::new();
-        for ca in custom_attrs {
-            customattrs.extend(q! {# #ca});
         }
         let maybe_where = if let Some(returnval_trait) = returnval_handler {
             q! {
@@ -100,7 +96,7 @@ impl InputData {
             Default::default()
         };
         out.extend(q! {
-            #customattrs
+            #(#custom_attrs)*
             #pub_or_priv enum #enum_name
             #maybe_where
             {
@@ -218,6 +214,7 @@ impl InputData {
             let variant_name = method.variant_name();
             let mut args = TokenStream::new();
             let mut arg_names = TokenStream::new();
+            let doc_attr = &method.doc_attr;
             for arg in &method.args {
                 let arg_name = &arg.name;
                 let arg_type = &arg.ty;
@@ -230,6 +227,7 @@ impl InputData {
             }
             if let (Some(ret), Some(returnval_trait)) = (&method.ret, returnval_handler) {
                 methods.extend(q! {
+                    #(#doc_attr)*
                     #visibility fn #method_name(&self, #args) -> <#returnval_trait as ::ctrlgen::Returnval>::RecvResult<#ret> {
                         let ret = <#returnval_trait as ::ctrlgen::Returnval>::create();
                         let msg = #enum_name::#variant_name { #arg_names ret: ret.0 };
@@ -239,6 +237,7 @@ impl InputData {
                 })
             } else {
                 methods.extend(q! {
+                    #(#doc_attr)*
                     #visibility fn #method_name(&self, #args) {
                         let msg = #enum_name::#variant_name { #arg_names };
                         self.sender.send(msg);

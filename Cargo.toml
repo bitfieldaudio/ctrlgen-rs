@@ -1,5 +1,6 @@
 [workspace]
 members = [
   "ctrlgen",
+  "ctrlgen-impl",
   "ctrlgen-derive"
 ]

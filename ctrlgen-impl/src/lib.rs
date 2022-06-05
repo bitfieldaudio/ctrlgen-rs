@@ -40,12 +40,14 @@ struct Method {
 
 impl Method {
     fn variant_name(&self) -> proc_macro2::Ident {
-        quote::format_ident!(
+        let mut ident = quote::format_ident!(
             "{}",
             self.name
                 .to_string()
                 .to_case(convert_case::Case::UpperCamel)
-        )
+        );
+        ident.set_span(self.name.span());
+        ident
     }
 }
 

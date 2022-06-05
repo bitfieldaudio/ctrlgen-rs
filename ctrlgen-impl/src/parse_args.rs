@@ -1,6 +1,7 @@
 use proc_macro2::TokenStream;
 use proc_macro2::TokenTree;
 use quote::TokenStreamExt;
+use syn::parse_quote;
 
 use crate::AccessMode;
 
@@ -85,7 +86,7 @@ pub(crate) fn parse_args(input: TokenStream) -> Params {
             ExpectingGroup(t) => {
                 match x {
                     TokenTree::Group(y) => match t {
-                        CustomAttr => enum_attr.push(y),
+                        CustomAttr => enum_attr.push(parse_quote!{ # #y }),
                     },
                     _ => panic!("Expected a group after parameter for {:?}", t),
                 }

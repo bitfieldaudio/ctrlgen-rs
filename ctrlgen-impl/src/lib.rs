@@ -94,8 +94,8 @@ impl AccessMode {
 struct Params {
     access_mode: AccessMode,
     returnval: Option<syn::Type>,
-    proxy: Option<proc_macro2::Ident>,
-    enum_attr: Vec<proc_macro2::Group>,
+    proxy: Option<syn::Ident>,
+    enum_attr: Vec<syn::Attribute>,
     enum_name: Ident,
 }
 

@@ -9,7 +9,6 @@ struct Service<T: From<i32>> {
     counter: T,
 }
 
-
 #[ctrlgen::ctrlgen(pub ServiceMsg,
     returnval = LocalRetval,
     proxy = ServiceProxy

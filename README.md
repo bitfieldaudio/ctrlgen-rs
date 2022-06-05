@@ -26,47 +26,65 @@ so i implemented the features i needed instead.
 ## Example
 
 ```rust
-#[derive(Default)]
-struct Service {
-    counter: i32,
-    flag: bool,
+struct Service<T: From<i32>> {
+    counter: T,
 }
 
 #[ctrlgen::ctrlgen(pub ServiceMsg,
-    returnval = LocalRetval,
+    returnval = TokioRetval,
     proxy = ServiceProxy
 )]
 impl Service {
     pub fn increment_by(&mut self, arg: i32) -> i32 {
-        self.counter += arg;
+        self.counter = arg;
         self.counter
     }
-
-    pub fn set_flag(&mut self, flag: bool) {
-        self.flag = flag;
-    }
-}
-
-fn test() {
-    let service = RefCell::new(Service {
-        counter: 0,
-        flag: false,
-    });
-    
-    let msg = ServiceMsg::SetFlag { flag: true };
-    msg.call_mut(&mut *service.borrow_mut());
-
-    // With proxy:
-    let proxy = ServiceProxy::new(|msg: ServiceMsg| {
-        msg.call_mut(&mut *service.borrow_mut());
-    });
-
-    let ret = proxy.increment_by(2);
-    assert_eq!(*ret.borrow(), Some(2));
-    assert_eq!(service.borrow().counter, 2);
 }
 ```
 
+This will generate the following code:
+
+```rust
+pub enum ServiceMsg
+where TokioRetval: ::ctrlgen::Returnval,
+{
+    IncrementBy {
+        arg: i32,
+        ret: <TokioRetval as ::ctrlgen::Returnval>::Sender<i32>,
+    },
+}
+
+impl ::ctrlgen::CallMut<Service> for ServiceMsg
+where TokioRetval: ::ctrlgen::Returnval,
+{
+    type Output = core::result::Result<(), <TokioRetval as ::ctrlgen::Returnval>::SendError>;
+    fn call_mut(self, this: &mut Service) -> Self::Output {
+        match self {
+            Self::IncrementBy { arg, ret } => {
+                <TokioRetval as ::ctrlgen::Returnval>::send(ret, this.increment_by(arg))
+            }
+        }
+    }
+}
+
+pub struct ServiceProxy<Sender: ::ctrlgen::MessageSender<ServiceMsg>> {
+    sender: Sender,
+}
+
+impl<Sender: ::ctrlgen::MessageSender<ServiceMsg>> ServiceProxy<Sender>
+where TokioRetval: ::ctrlgen::Returnval,
+{
+    pub fn new(sender: Sender) -> Self {
+        Self { sender }
+    }
+    pub fn increment_by(&self, arg: i32) -> <TokioRetval as ::ctrlgen::Returnval>::RecvResult<i32> {
+        let ret = <TokioRetval as ::ctrlgen::Returnval>::create();
+        let msg = ServiceMsg::IncrementBy { arg, ret: ret.0 };
+        self.sender.send(msg);
+        <TokioRetval as ::ctrlgen::Returnval>::recv(ret.1)
+    }
+}
+```
 ## Returnval
 
 By setting the `returnval = <Trait>` parameter, you configure the channel over which return values are sent.

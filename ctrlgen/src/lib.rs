@@ -1,4 +1,5 @@
 #![feature(try_trait_v2, generic_associated_types, type_alias_impl_trait)]
+#![doc = include_str!("../../README.md")]
 pub mod promise;
 pub mod returnval;
 

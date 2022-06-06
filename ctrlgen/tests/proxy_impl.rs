@@ -1,9 +1,6 @@
 #![feature(generic_associated_types, type_alias_impl_trait)]
-use std::cell::RefCell;
-
+use ctrlgen::Proxy;
 use ctrlgen::returnval::LocalRetval;
-use ctrlgen::CallMut;
-use ctrlgen::MessageSender;
 
 #[derive(Default)]
 struct Service {
@@ -28,6 +25,6 @@ impl Service {
 
 struct ServiceProxy {}
 
-impl MessageSender<ServiceMsg> for ServiceProxy {
-    fn send(&self, msg: ServiceMsg) {}
+impl Proxy<ServiceMsg> for ServiceProxy {
+    fn send(&self, _msg: ServiceMsg) {}
 }

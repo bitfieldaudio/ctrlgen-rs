@@ -9,6 +9,10 @@ pub trait MessageSender<Msg> {
     fn send(&self, msg: Msg);
 }
 
+pub trait Proxy<Msg> {
+    fn send(&self, msg: Msg);
+}
+
 pub trait Returnval {
     type Sender<T>;
     type Receiver<T>;

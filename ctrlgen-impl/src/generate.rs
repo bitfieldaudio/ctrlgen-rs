@@ -226,7 +226,7 @@ impl InputData {
                 sender: Sender
             }
 
-            impl<Sender: ::ctrlgen::MessageSender<#enum_name>> ::ctrlgen::MessageSender<#enum_name> for #proxy_name<Sender> {
+            impl<Sender: ::ctrlgen::MessageSender<#enum_name>> ::ctrlgen::Proxy<#enum_name> for #proxy_name<Sender> {
                 fn send(&self, msg: #enum_name) {
                     self.sender.send(msg)
                 }
@@ -270,7 +270,7 @@ impl InputData {
                     #visibility fn #method_name(&self, #args) -> <#returnval_trait as ::ctrlgen::Returnval>::RecvResult<#ret> {
                         let ret = <#returnval_trait as ::ctrlgen::Returnval>::create();
                         let msg = #enum_name::#variant_name { #arg_names ret: ret.0 };
-                        <Self as ::ctrlgen::MessageSender<#enum_name>>::send(self, msg);
+                        <Self as ::ctrlgen::Proxy<#enum_name>>::send(self, msg);
                         <#returnval_trait as ::ctrlgen::Returnval>::recv(ret.1)                        
                     }
                 })
@@ -279,14 +279,14 @@ impl InputData {
                     #(#doc_attr)*
                     #visibility fn #method_name(&self, #args) {
                         let msg = #enum_name::#variant_name { #arg_names };
-                        <Self as ::ctrlgen::MessageSender<#enum_name>>::send(self, msg);
+                        <Self as ::ctrlgen::Proxy<#enum_name>>::send(self, msg);
                     }
                 })
             }
         }
         let mut where_clause: WhereClause = parse_quote!{ 
             where 
-                Self: ::ctrlgen::MessageSender<#enum_name>,
+                Self: ::ctrlgen::Proxy<#enum_name>,
         };
         if let Some(returnval_trait) = returnval_handler {
             where_clause.predicates.push(parse_quote! {

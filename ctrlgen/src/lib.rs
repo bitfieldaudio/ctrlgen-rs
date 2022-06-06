@@ -73,3 +73,9 @@ where
         async { self.call_mut(service) }
     }
 }
+
+impl<Msg: core::fmt::Debug> MessageSender<Msg> for tokio::sync::mpsc::UnboundedSender<Msg> {
+    fn send(&self, msg: Msg) {
+        self.send(msg).unwrap()
+    }
+}

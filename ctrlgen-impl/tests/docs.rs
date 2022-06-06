@@ -45,11 +45,6 @@ fn preserve_documentation_enum() {
 
     let generated: Items = syn::parse2(ctrlgen_impl(params, block)).unwrap();
     let expected: Items = parse_quote! {
-        impl Struct {
-          /// Foo function
-          fn foo(&mut self) {}
-        }
-
         enum Msg {
             /// Foo function
             Foo {},
@@ -62,6 +57,10 @@ fn preserve_documentation_enum() {
                     Self::Foo {} => { this.foo (); () }
                 }
             }
+        }
+        impl Struct {
+          /// Foo function
+          fn foo(&mut self) {}
         }
     };
 
@@ -82,11 +81,6 @@ fn preserve_documentation_proxy() {
 
     let generated: Items = syn::parse2(ctrlgen_impl(params, block)).unwrap();
     let expected: Items = parse_quote! {
-        impl Struct {
-          /// Foo function
-          fn foo(&mut self) {}
-        }
-
         enum Msg {
             /// Foo function
             Foo {},
@@ -114,6 +108,12 @@ fn preserve_documentation_proxy() {
                 self.sender.send(msg);
             }
         }   
+        
+        impl Struct {
+          /// Foo function
+          fn foo(&mut self) {}
+        }
+
     };
 
     assert_eq!(generated, expected)

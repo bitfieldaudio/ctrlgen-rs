@@ -222,8 +222,8 @@ impl InputData {
                 }));
                 res
             }
-            crate::Proxy::Trait(_) => {
-                todo!()
+            crate::Proxy::Trait(x) => {
+                self.generate_proxy_trait(x)
             }
             crate::Proxy::Impl(proxy_impl) => self.generate_proxy_impl(proxy_impl),
         }
@@ -322,4 +322,72 @@ impl InputData {
             }
         }
     }
-}
+    
+    pub fn generate_proxy_trait(&self, trait_: &syn::Ident) -> TokenStream {
+        let returnval_handler = self.params.returnval.as_ref();
+        let proxy_name = trait_;
+        let enum_name = &self.params.enum_name;
+        let visibility = &self.params.visibility;
+
+        let mut methods = TokenStream::new();
+
+        for method in &self.methods {
+            let method_name = &method.name;
+            let variant_name = method.variant_name();
+            let mut args = TokenStream::new();
+            let mut arg_names = TokenStream::new();
+            let doc_attr = &method.doc_attr;
+            for arg in &method.args {
+                let arg_name = &arg.name;
+                let arg_type = &arg.ty;
+                args.extend(q! {
+                    #arg_name: #arg_type,
+                });
+                arg_names.extend(q! {
+                    #arg_name,
+                });
+            }
+            if let (Some(ret), Some(returnval_trait)) = (&method.ret, returnval_handler) {
+                methods.extend(q! {
+                    #(#doc_attr)*
+                    fn #method_name(&self, #args) -> <#returnval_trait as ::ctrlgen::Returnval>::RecvResult<#ret> {
+                        let ret = <#returnval_trait as ::ctrlgen::Returnval>::create();
+                        let msg = #enum_name::#variant_name { #arg_names ret: ret.0 };
+                        Self::send(self, msg);
+                        <#returnval_trait as ::ctrlgen::Returnval>::recv(ret.1)                        
+                    }
+                })
+            } else {
+                methods.extend(q! {
+                    #(#doc_attr)*
+                    fn #method_name(&self, #args) {
+                        let msg = #enum_name::#variant_name { #arg_names };
+                        Self::send(self, msg);
+                    }
+                })
+            }
+        }
+        let mut where_clause: WhereClause = parse_quote! {
+            where
+                Self: ::ctrlgen::Proxy<#enum_name>,
+        };
+        if let Some(returnval_trait) = returnval_handler {
+            where_clause.predicates.push(parse_quote! {
+                #returnval_trait : ::ctrlgen::Returnval
+            });
+        }
+
+        q! {
+            #visibility trait #proxy_name {
+                fn send(&self, msg: #enum_name);
+                
+                #methods
+            }
+
+            impl< T : ::ctrlgen::Proxy<#enum_name>> #proxy_name for T {
+                fn send(&self, msg: #enum_name) {
+                    ::ctrlgen::Proxy::<#enum_name>::send(self, msg)
+                }
+            }
+        }
+    }}

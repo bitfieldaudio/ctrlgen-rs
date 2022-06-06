@@ -15,6 +15,8 @@ fn borrow_toowned() -> TokenStream {
     panic!("Cannot use borrow::ToOwned without either `std` or `alloc` features of ctrlgen")
 }
 
+use crate::ProxyImpl;
+
 use super::InputData;
 impl InputData {
     pub fn make_where_clause(&self) -> WhereClause {
@@ -196,8 +198,18 @@ impl InputData {
         }
     }
     pub fn generate_proxy(&self) -> TokenStream {
-        let mut res = self.generate_proxy_struct();
-        res.extend(self.generate_proxy_impl());
+        let mut res = TokenStream::new();
+        if let Some(proxy) = self.params.proxy.as_ref() {
+            let enum_name = &self.params.enum_name;
+            res.extend(self.generate_proxy_struct());
+            res.extend(self.generate_proxy_impl(&ProxyImpl {
+                path: parse_quote! { #proxy<Sender> },
+                generics: parse_quote! { <Sender: ::ctrlgen::MessageSender<#enum_name>> },
+            }));
+        }
+        if let Some(proxy_impl) = self.params.proxy_impl.as_ref() {
+            res.extend(self.generate_proxy_impl(proxy_impl));
+        }
         res
     }
 
@@ -213,15 +225,24 @@ impl InputData {
             #visibility struct #proxy_name<Sender: ::ctrlgen::MessageSender<#enum_name>> {
                 sender: Sender
             }
+
+            impl<Sender: ::ctrlgen::MessageSender<#enum_name>> ::ctrlgen::MessageSender<#enum_name> for #proxy_name<Sender> {
+                fn send(&self, msg: #enum_name) {
+                    self.sender.send(msg)
+                }
+            } 
+
+            impl<Sender: ::ctrlgen::MessageSender<#enum_name>> #proxy_name<Sender> {
+                #visibility fn new(sender: Sender) -> Self {
+                    Self { sender }
+                }
+            }
         }
     }
     
-    pub fn generate_proxy_impl(&self) -> TokenStream {
-        if self.params.proxy.is_none() {
-            return TokenStream::new();
-        }
-        let proxy_name = self.params.proxy.as_ref().unwrap();
+    pub fn generate_proxy_impl(&self, impl_: &ProxyImpl) -> TokenStream {
         let returnval_handler = self.params.returnval.as_ref();
+        let proxy_path = &impl_.path;
         let enum_name = &self.params.enum_name;
         let visibility = &self.params.visibility;
 
@@ -249,7 +270,7 @@ impl InputData {
                     #visibility fn #method_name(&self, #args) -> <#returnval_trait as ::ctrlgen::Returnval>::RecvResult<#ret> {
                         let ret = <#returnval_trait as ::ctrlgen::Returnval>::create();
                         let msg = #enum_name::#variant_name { #arg_names ret: ret.0 };
-                        self.sender.send(msg);
+                        <Self as ::ctrlgen::MessageSender<#enum_name>>::send(self, msg);
                         <#returnval_trait as ::ctrlgen::Returnval>::recv(ret.1)                        
                     }
                 })
@@ -258,26 +279,32 @@ impl InputData {
                     #(#doc_attr)*
                     #visibility fn #method_name(&self, #args) {
                         let msg = #enum_name::#variant_name { #arg_names };
-                        self.sender.send(msg);
+                        <Self as ::ctrlgen::MessageSender<#enum_name>>::send(self, msg);
                     }
                 })
             }
         }
-        let maybe_where = if let Some(returnval_trait) = returnval_handler {
-            q! {
-                where #returnval_trait : ::ctrlgen::Returnval
-            }
-        } else {
-            Default::default()
+        let mut where_clause: WhereClause = parse_quote!{ 
+            where 
+                Self: ::ctrlgen::MessageSender<#enum_name>,
         };
+        if let Some(returnval_trait) = returnval_handler {
+            where_clause.predicates.push(parse_quote! {
+                #returnval_trait : ::ctrlgen::Returnval
+            });
+        }
+
+        let (impl_generics, _, generics_where) = impl_.generics.split_for_impl();
+        if let Some(generics_where) = generics_where {
+            for pred in generics_where.predicates.iter() {
+                where_clause.predicates.push(pred.clone())
+            }
+        }
 
         q! {
-            impl<Sender: ::ctrlgen::MessageSender<#enum_name>> #proxy_name<Sender>
-            #maybe_where
+            impl #impl_generics #proxy_path
+            #where_clause
             {
-                #visibility fn new(sender: Sender) -> Self {
-                    Self { sender }
-                }
 
                 #methods
             }

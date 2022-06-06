@@ -59,7 +59,7 @@ fn preserve_documentation_enum() {
 #[test]
 fn preserve_documentation_proxy() {
     let params: Params = parse_quote! {
-        Msg, proxy = Proxy
+        Msg, proxy_impl = Proxy
     };
     let mut block: ItemImpl = parse_quote! {
       impl Struct {
@@ -69,20 +69,16 @@ fn preserve_documentation_proxy() {
     };
 
     let input = InputData::parse_inherent_impl(&mut block, params).unwrap();
-    let generated: syn::ItemImpl = syn::parse2(input.generate_proxy_impl()).unwrap();
+    let generated: syn::ItemImpl = syn::parse2(input.generate_proxy()).unwrap();
 
-    let expected = parse_quote! {
-        impl<Sender: ::ctrlgen::MessageSender<Msg>> Proxy<Sender> {
-            fn new(sender: Sender) -> Self {
-                Self { sender }
-            }
-            /// Foo function
-            fn foo(&self, ) {
-                let msg = Msg::Foo {};
-                self.sender.send(msg);
-            }
-        }
-    };
-
-    assert_eq!(generated, expected)
+    match &generated.items[0] {
+        syn::ImplItem::Method(x) => {
+            let doc = x.attrs[0].clone();
+            let expected: syn::Attribute = parse_quote! {
+                #[doc = r" Foo function"]
+            };
+            assert_eq!(doc, expected)
+        },
+        _ => panic!("Expected only a method"),
+    }
 }

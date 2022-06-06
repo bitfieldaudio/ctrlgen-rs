@@ -77,10 +77,16 @@ impl InputData {
     }
 }
 
+pub struct ProxyImpl {
+    path: syn::TypePath,
+    generics: syn::Generics,
+}
+
 pub struct Params {
     visibility: syn::Visibility,
     returnval: Option<syn::Type>,
     proxy: Option<syn::Ident>,
+    proxy_impl: Option<ProxyImpl>,
     enum_attr: Vec<syn::Attribute>,
     enum_name: Ident,
 }

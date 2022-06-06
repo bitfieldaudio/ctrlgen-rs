@@ -1,7 +1,9 @@
+use crate::ProxyImpl;
 use syn::bracketed;
 use syn::parse::Parse;
 use syn::Attribute;
 use syn::Token;
+
 use super::Params;
 
 impl Parse for Params {
@@ -18,8 +20,9 @@ impl Parse for Params {
         let mut returnval = None;
         let mut proxy = None;
         let mut enum_attr = Vec::new();
+        let mut proxy_impl = None;
 
-        while input.peek(Token![,]){
+        while input.peek(Token![,]) {
             let _comma: Token![,] = input.parse()?;
             if input.is_empty() {
                 // Allow trailing comma
@@ -30,7 +33,7 @@ impl Parse for Params {
                 "enum_attr" => {
                     let content;
                     enum_attr.push(Attribute {
-                    pound_token: Token![#](input.span()),
+                        pound_token: Token![#](input.span()),
                         style: syn::AttrStyle::Outer,
                         bracket_token: bracketed!(content in input),
                         path: content.call(syn::Path::parse_mod_style)?,
@@ -38,12 +41,36 @@ impl Parse for Params {
                     })
                 }
                 "returnval" => {
+                    if returnval.is_some() {
+                        return Err(syn::Error::new_spanned(
+                            arg,
+                            "Argument `returnval` specified twice",
+                        ));
+                    }
                     let _eq: Token![=] = input.parse()?;
                     returnval = Some(input.parse()?)
                 }
                 "proxy" => {
+                    if proxy.is_some() {
+                        return Err(syn::Error::new_spanned(
+                            arg,
+                            "Argument `proxy` specified twice",
+                        ));
+                    }
                     let _eq: Token![=] = input.parse()?;
-                    proxy = Some(input.parse()?)
+                    proxy = Some(input.parse()?);
+                }
+                "proxy_impl" => {
+                    if proxy_impl.is_some() {
+                        return Err(syn::Error::new_spanned(
+                            arg,
+                            "Argument `proxy_impl` specified twice",
+                        ));
+                    }
+                    let generics = input.parse()?;
+                    let _eq: Token![=] = input.parse()?;
+                    let path = input.parse()?;
+                    proxy_impl = Some(ProxyImpl { path, generics });
                 }
                 _ => {
                     return Err(syn::Error::new(
@@ -59,6 +86,7 @@ impl Parse for Params {
             enum_name,
             returnval,
             proxy,
+            proxy_impl,
             enum_attr,
         })
     }

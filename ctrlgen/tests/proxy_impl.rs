@@ -8,7 +8,7 @@ struct Service {
     flag: bool,
 }
 
-#[ctrlgen::ctrlgen(pub ServiceMsg,
+#[ctrlgen::ctrlgen(pub enum ServiceMsg,
     returnval = LocalRetval,
     proxy_impl = ServiceProxy,
 )]

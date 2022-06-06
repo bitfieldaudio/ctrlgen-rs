@@ -2,9 +2,10 @@
 
 struct Service;
 
-#[ctrlgen::ctrlgen(pub ServiceMsg,
-    enum_attr[derive(Debug)],
+#[ctrlgen::ctrlgen(
     #[derive(Clone)]
+    pub enum ServiceMsg,
+    enum_attr[derive(Debug)],
 )]
 impl Service {
     pub fn foo(&mut self) {}

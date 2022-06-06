@@ -35,7 +35,7 @@ impl std::fmt::Debug for Items {
 #[test]
 fn preserve_documentation_enum() {
     let params: Params = parse_quote! {
-        Msg
+        enum Msg
     };
     let mut block: ItemImpl = parse_quote! {
       impl Struct {
@@ -59,7 +59,7 @@ fn preserve_documentation_enum() {
 #[test]
 fn preserve_documentation_proxy() {
     let params: Params = parse_quote! {
-        Msg, proxy_impl = Proxy
+        enum Msg, proxy_impl = Proxy
     };
     let mut block: ItemImpl = parse_quote! {
       impl Struct {

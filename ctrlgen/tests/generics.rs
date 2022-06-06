@@ -9,7 +9,7 @@ struct Service<T: From<i32>> {
     counter: T,
 }
 
-#[ctrlgen::ctrlgen(pub ServiceMsg,
+#[ctrlgen::ctrlgen(pub enum ServiceMsg,
     returnval = LocalRetval,
     proxy = ServiceProxy
 )]

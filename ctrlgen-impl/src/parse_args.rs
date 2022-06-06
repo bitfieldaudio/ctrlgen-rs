@@ -8,18 +8,20 @@ use super::Params;
 
 impl Parse for Params {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let visibility: Option<syn::Visibility> = if input.fork().parse::<syn::Visibility>().is_ok()
-        {
-            input.parse().ok()
-        } else {
-            None
-        };
-        let visibility = visibility.unwrap_or(syn::Visibility::Inherited);
+        let mut enum_attr = Attribute::parse_outer(input)?;
+
+        let visibility: syn::Visibility = input
+            .fork()
+            .parse::<syn::Visibility>()
+            .ok()
+            .and_then(|_| input.parse().ok())
+            .unwrap_or(syn::Visibility::Inherited);
+
+        let _: Token![enum] = input.parse()?;
 
         let enum_name: syn::Ident = input.parse()?;
         let mut returnval = None;
         let mut proxy = None;
-        let mut enum_attr = Vec::new();
         let mut proxy_impl = Vec::new();
 
         while input.peek(Token![,]) {
@@ -27,10 +29,6 @@ impl Parse for Params {
             if input.is_empty() {
                 // Allow trailing comma
                 break;
-            }
-            if input.peek(Token![#]) {
-                enum_attr.extend(Attribute::parse_outer(input)?);
-                continue;
             }
             let arg: syn::Ident = input.parse()?;
             match arg.to_string().as_str() {

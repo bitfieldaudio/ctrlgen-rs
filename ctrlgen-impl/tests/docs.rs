@@ -1,12 +1,13 @@
 use std::fmt::Display;
 
-use ctrlgen_impl::ctrlgen_impl;
+use ctrlgen_impl::InputData;
+use ctrlgen_impl::Params;
 use proc_macro2::TokenStream;
-use quote::quote as q;
 use quote::ToTokens;
 use syn::parse::Parse;
 use syn::parse::ParseStream;
 use syn::parse_quote;
+use syn::ItemImpl;
 
 #[derive(PartialEq, Eq)]
 struct Items(Vec<syn::Item>);
@@ -33,34 +34,22 @@ impl std::fmt::Debug for Items {
 
 #[test]
 fn preserve_documentation_enum() {
-    let params = q! {
+    let params: Params = parse_quote! {
         Msg
     };
-    let block = q! {
+    let mut block: ItemImpl = parse_quote! {
       impl Struct {
         /// Foo function
         fn foo(&mut self) {}
       }
     };
+    let input = InputData::parse_inherent_impl(&mut block, params).unwrap();
+    let generated: syn::ItemEnum = syn::parse2(input.generate_enum()).unwrap();
 
-    let generated: Items = syn::parse2(ctrlgen_impl(params, block)).unwrap();
-    let expected: Items = parse_quote! {
+    let expected: syn::ItemEnum = parse_quote! {
         enum Msg {
             /// Foo function
             Foo {},
-        }
-
-        impl ::ctrlgen::CallMut<Struct> for Msg {
-            type Output = ();
-            fn call_mut (self, this: &mut Struct) -> Self::Output {
-                match self {
-                    Self::Foo {} => { this.foo (); () }
-                }
-            }
-        }
-        impl Struct {
-          /// Foo function
-          fn foo(&mut self) {}
         }
     };
 
@@ -69,35 +58,20 @@ fn preserve_documentation_enum() {
 
 #[test]
 fn preserve_documentation_proxy() {
-    let params = q! {
+    let params: Params = parse_quote! {
         Msg, proxy = Proxy
     };
-    let block = q! {
+    let mut block: ItemImpl = parse_quote! {
       impl Struct {
         /// Foo function
         fn foo(&mut self) {}
       }
     };
 
-    let generated: Items = syn::parse2(ctrlgen_impl(params, block)).unwrap();
-    let expected: Items = parse_quote! {
-        enum Msg {
-            /// Foo function
-            Foo {},
-        }
+    let input = InputData::parse_inherent_impl(&mut block, params).unwrap();
+    let generated: syn::ItemImpl = syn::parse2(input.generate_proxy_impl()).unwrap();
 
-        impl ::ctrlgen::CallMut<Struct> for Msg {
-            type Output = ();
-            fn call_mut (self, this: &mut Struct) -> Self::Output {
-                match self {
-                    Self::Foo {} => { this.foo (); () }
-                }
-            }
-        }
-
-        struct Proxy<Sender: ::ctrlgen::MessageSender<Msg>> {
-            sender: Sender
-        }
+    let expected = parse_quote! {
         impl<Sender: ::ctrlgen::MessageSender<Msg>> Proxy<Sender> {
             fn new(sender: Sender) -> Self {
                 Self { sender }
@@ -107,15 +81,8 @@ fn preserve_documentation_proxy() {
                 let msg = Msg::Foo {};
                 self.sender.send(msg);
             }
-        }   
-        
-        impl Struct {
-          /// Foo function
-          fn foo(&mut self) {}
         }
-
     };
 
     assert_eq!(generated, expected)
 }
-

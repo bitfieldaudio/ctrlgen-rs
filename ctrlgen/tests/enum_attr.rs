@@ -1,8 +1,5 @@
 #![feature(generic_associated_types, type_alias_impl_trait)]
-use ctrlgen::returnval::LocalRetval;
-use ctrlgen::CallMut;
 
-#[derive(Default)]
 struct Service;
 
 #[ctrlgen::ctrlgen(pub ServiceMsg,

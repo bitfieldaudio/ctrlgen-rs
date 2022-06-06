@@ -45,12 +45,13 @@ where
 }
 
 pub trait CallMut<Service> {
-    type Output;
-    fn call_mut(self, service: &mut Service) -> Self::Output;
+    type Error;
+    fn call_mut(self, service: &mut Service) -> core::result::Result<(), Self::Error>;
 }
 
 pub trait CallMutAsync<Service> {
-    type Future<'a>: core::future::Future + 'a
+    type Error;
+    type Future<'a>: core::future::Future<Output = core::result::Result<(), Self::Error>> + 'a
     where
         Service: 'a;
     fn call_mut_async(self, service: &mut Service) -> Self::Future<'_>;
@@ -60,7 +61,8 @@ impl<T, U: 'static> CallMutAsync<T> for U
 where
     U: CallMut<T>,
 {
-    type Future<'a> = impl core::future::Future<Output = U::Output> + 'a
+    type Error = U::Error;
+    type Future<'a> = impl core::future::Future<Output = core::result::Result<(), Self::Error>> + 'a
         where T: 'a;
 
     fn call_mut_async(self, service: &mut T) -> Self::Future<'_> {

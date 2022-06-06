@@ -1,4 +1,4 @@
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote as q;
 use syn::{WhereClause, Token, punctuated::Punctuated, parse_quote};
 
@@ -17,7 +17,7 @@ fn borrow_toowned() -> TokenStream {
 
 use super::InputData;
 impl InputData {
-    pub(crate) fn make_where_clause(&self) -> WhereClause {
+    pub fn make_where_clause(&self) -> WhereClause {
         let mut where_clause = self.generics.where_clause.clone().unwrap_or_else(|| WhereClause {
             where_token: <Token![where]>::default(),
             predicates: Punctuated::new(),
@@ -30,10 +30,10 @@ impl InputData {
         where_clause
     }
 
-    pub(crate) fn generate_enum(&self, out: &mut TokenStream) {
+    pub fn generate_enum(&self) -> TokenStream {
         let returnval_handler = self.params.returnval.as_ref();
         let custom_attrs = &self.params.enum_attr[..];
-        let pub_or_priv = self.params.access_mode.code();
+        let visibility = &self.params.visibility;
         let enum_name = &self.params.enum_name;
         let mut variants = TokenStream::new();
         for method in &self.methods {
@@ -95,35 +95,28 @@ impl InputData {
         } else {
             Default::default()
         };
-        out.extend(q! {
+        q! {
             #(#custom_attrs)*
-            #pub_or_priv enum #enum_name
+            #visibility enum #enum_name
             #maybe_where
             {
                 #variants
             }
-        });
+        }
     }
 
-    pub(crate) fn generate_call_impl(&self, out: &mut TokenStream) {
+    pub fn generate_call_impl(&self) -> TokenStream {
         let returnval_handler = self.params.returnval.as_ref();
         let struct_name = &self.name;
         let enum_name = &self.params.enum_name;
         let is_async = self.has_async_functions();
         
-        let output_type = if let Some(returnval_trait) = returnval_handler {
+        let error_type = if let Some(returnval_trait) = returnval_handler {
             q! {
-                core::result::Result<(), <#returnval_trait as ::ctrlgen::Returnval>::SendError>
+                <#returnval_trait as ::ctrlgen::Returnval>::SendError
             }
         } else {
-            q! { () }
-        };
-        let output_ok = if returnval_handler.is_some() {
-            q! {
-                Ok(())
-            }
-        } else {
-            q! { () }
+            q! { ::core::convert::Infallible }
         };
 
         let mut cases = TokenStream::new();
@@ -155,7 +148,7 @@ impl InputData {
             } else {
                 body.extend(q! {
                     #func_call;
-                    #output_ok
+                    Ok(())
                 });
             }
 
@@ -171,24 +164,25 @@ impl InputData {
         let where_clause = self.make_where_clause();
 
         if !is_async {
-            out.extend(q! {
+            q! {
                 impl #impl_generics ::ctrlgen::CallMut < #struct_name #struct_args > for #enum_name
                 #where_clause
                 {
-                    type Output = #output_type;
-                    fn call_mut(self, this: &mut #struct_name #struct_args) -> Self::Output {
+                    type Error = #error_type;
+                    fn call_mut(self, this: &mut #struct_name #struct_args) -> ::core::result::Result<(), Self::Error> {
                         match self {
                             #cases
                         }
                     }
                 }
-            });
+            }
         } else {
-            out.extend(q! {
+            q! {
                 impl #impl_generics ::ctrlgen::CallMutAsync < #struct_name #struct_args > for #enum_name
                 #where_clause
                 {
-                    type Future<'a> = impl core::future::Future<Output = #output_type> + 'a
+                    type Error = #error_type;
+                    type Future<'a> = impl core::future::Future<Output = ::core::result::Result<(), Self::Error>> + 'a
                         where #struct_name #struct_args: 'a;
                     fn call_mut_async(self, this: &mut #struct_name #struct_args) -> Self::Future<'_> {
                         async {
@@ -198,14 +192,38 @@ impl InputData {
                         }
                     }
                 }
-            });
+            }
         }
     }
+    pub fn generate_proxy(&self) -> TokenStream {
+        let mut res = self.generate_proxy_struct();
+        res.extend(self.generate_proxy_impl());
+        res
+    }
 
-    pub(crate) fn generate_proxy(&self, out: &mut TokenStream, proxy_name: &Ident) {
+    pub fn generate_proxy_struct(&self) -> TokenStream {
+        if self.params.proxy.is_none() {
+            return TokenStream::new();
+        }
+        let proxy_name = self.params.proxy.as_ref().unwrap();
+        let enum_name = &self.params.enum_name;
+        let visibility = &self.params.visibility;
+        
+        q! {
+            #visibility struct #proxy_name<Sender: ::ctrlgen::MessageSender<#enum_name>> {
+                sender: Sender
+            }
+        }
+    }
+    
+    pub fn generate_proxy_impl(&self) -> TokenStream {
+        if self.params.proxy.is_none() {
+            return TokenStream::new();
+        }
+        let proxy_name = self.params.proxy.as_ref().unwrap();
         let returnval_handler = self.params.returnval.as_ref();
         let enum_name = &self.params.enum_name;
-        let visibility = self.params.access_mode.code();
+        let visibility = &self.params.visibility;
 
         let mut methods = TokenStream::new();
 
@@ -253,11 +271,7 @@ impl InputData {
             Default::default()
         };
 
-        out.extend(q! {
-            #visibility struct #proxy_name<Sender: ::ctrlgen::MessageSender<#enum_name>> {
-                sender: Sender
-            }
-
+        q! {
             impl<Sender: ::ctrlgen::MessageSender<#enum_name>> #proxy_name<Sender>
             #maybe_where
             {
@@ -267,6 +281,7 @@ impl InputData {
 
                 #methods
             }
-        });
+        }
+
     }
 }

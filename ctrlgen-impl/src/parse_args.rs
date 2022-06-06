@@ -1,114 +1,61 @@
-use proc_macro2::TokenStream;
-use proc_macro2::TokenTree;
-use quote::TokenStreamExt;
-use syn::parse_quote;
-
-use crate::AccessMode;
-
+use syn::bracketed;
+use syn::parse::Parse;
+use syn::Attribute;
+use syn::Token;
 use super::Params;
-enum ParserState<I, G> {
-    ExpectingName,
-    ExpectingNewParam,
-    ExpectingIdent(I),
-    ExpectingEqsign(I),
-    ExpectingGroup(G),
-}
 
-#[derive(Debug, Clone, Copy)]
-enum RootLevelIdentAssignmentTargets {
-    Returnval,
-    Proxy,
-}
-#[derive(Debug, Clone, Copy)]
-enum RootLevelGroupAssignmentTargets {
-    CustomAttr,
-}
+impl Parse for Params {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let visibility: Option<syn::Visibility> = if input.fork().parse::<syn::Visibility>().is_ok()
+        {
+            input.parse().ok()
+        } else {
+            None
+        };
+        let visibility = visibility.unwrap_or(syn::Visibility::Inherited);
 
-pub(crate) fn parse_args(input: TokenStream) -> Params {
-    let mut proxy = None;
-    let mut access_mode = AccessMode::Priv;
-    let mut returnval = TokenStream::new();
-    let mut enum_attr = vec![];
-    let mut enum_name = None;
+        let enum_name: syn::Ident = input.parse()?;
+        let mut returnval = None;
+        let mut proxy = None;
+        let mut enum_attr = Vec::new();
 
-    let mut state = ParserState::<RootLevelIdentAssignmentTargets,RootLevelGroupAssignmentTargets>::ExpectingName;
-
-    use ParserState::*;
-    use RootLevelGroupAssignmentTargets::*;
-    use RootLevelIdentAssignmentTargets::*;
-
-    for x in input {
-        match state {
-            ExpectingName => match x {
-                TokenTree::Ident(y) => match y.to_string().as_str() {
-                    "pub" => access_mode = AccessMode::Pub,
-                    "pub_crate" => access_mode = AccessMode::PubCrate,
-                    _ => {
-                        enum_name = Some(y);
-                        state = ExpectingNewParam;
-                    }
-                },
-                _ => panic!("Expected enum name or visibility as first parameter"),
-            },
-            ExpectingNewParam => match x {
-                TokenTree::Ident(y) => match y.to_string().as_str() {
-                    "returnval" => state = ExpectingEqsign(Returnval),
-                    "proxy" => state = ExpectingEqsign(Proxy),
-                    "enum_attr" => state = ExpectingGroup(CustomAttr),
-                    z => panic!("Unknown parameter {}", z),
-                },
-                TokenTree::Group(_) => panic!("No group is expected here"),
-                TokenTree::Punct(y) if y.as_char() == ',' => (),
-                TokenTree::Punct(_) => panic!("No punctuation is expected here"),
-                TokenTree::Literal(_) => panic!("No literal is expected here"),
-            },
-            ExpectingIdent(Returnval) => match x {
-                TokenTree::Punct(y) if y.as_char() == ',' => state = ExpectingNewParam,
-                x => returnval.append(x),
-            },
-            ExpectingIdent(t) => {
-                match x {
-                    TokenTree::Ident(y) => match t {
-                        Returnval => unreachable!(),
-                        Proxy => proxy = Some(y),
-                    },
-                    _ => panic!(
-                        "Single identifier is expected in {:?} state after `=` sign",
-                        t
-                    ),
+        while input.peek(Token![,]){
+            let _comma: Token![,] = input.parse()?;
+            let arg: syn::Ident = input.parse()?;
+            match arg.to_string().as_str() {
+                "enum_attr" => {
+                    let content;
+                    enum_attr.push(Attribute {
+                    pound_token: Token![#](input.span()),
+                        style: syn::AttrStyle::Outer,
+                        bracket_token: bracketed!(content in input),
+                        path: content.call(syn::Path::parse_mod_style)?,
+                        tokens: content.parse()?,
+                    })
                 }
-                state = ExpectingNewParam;
-            }
-            ExpectingEqsign(t) => match x {
-                TokenTree::Punct(y) if y.as_char() == '=' => state = ExpectingIdent(t),
-                _ => panic!("Expected `=` character after parameter for {:?}", t),
-            },
-            ExpectingGroup(t) => {
-                match x {
-                    TokenTree::Group(y) => match t {
-                        CustomAttr => enum_attr.push(parse_quote!{ # #y }),
-                    },
-                    _ => panic!("Expected a group after parameter for {:?}", t),
+                "returnval" => {
+                    let _eq: Token![=] = input.parse()?;
+                    returnval = Some(input.parse()?)
                 }
-                state = ExpectingNewParam
-            }
+                "proxy" => {
+                    let _eq: Token![=] = input.parse()?;
+                    proxy = Some(input.parse()?)
+                }
+                _ => {
+                    return Err(syn::Error::new(
+                        arg.span(),
+                        format!("Unknown argument to ctrlgen {arg}"),
+                    ))
+                }
+            };
         }
-    }
 
-    let enum_name = enum_name.expect("`name` parameter is required.");
-
-    let returnval = if returnval.is_empty() {
-        None
-    } else {
-        Some(syn::parse(returnval.into()).unwrap())
-    };
-
-    Params {
-        proxy,
-        // call_fns,
-        access_mode,
-        returnval,
-        enum_attr,
-        enum_name,
+        Ok(Self {
+            visibility,
+            enum_name,
+            returnval,
+            proxy,
+            enum_attr,
+        })
     }
 }

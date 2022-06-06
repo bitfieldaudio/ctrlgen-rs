@@ -20,7 +20,7 @@ impl Parse for Params {
         let mut returnval = None;
         let mut proxy = None;
         let mut enum_attr = Vec::new();
-        let mut proxy_impl = None;
+        let mut proxy_impl = Vec::new();
 
         while input.peek(Token![,]) {
             let _comma: Token![,] = input.parse()?;
@@ -61,21 +61,15 @@ impl Parse for Params {
                     proxy = Some(input.parse()?);
                 }
                 "proxy_impl" => {
-                    if proxy_impl.is_some() {
-                        return Err(syn::Error::new_spanned(
-                            arg,
-                            "Argument `proxy_impl` specified twice",
-                        ));
-                    }
                     let generics = input.parse()?;
                     let _eq: Token![=] = input.parse()?;
                     let path = input.parse()?;
-                    proxy_impl = Some(ProxyImpl { path, generics });
+                    proxy_impl.push(ProxyImpl { path, generics });
                 }
                 _ => {
                     return Err(syn::Error::new(
                         arg.span(),
-                        format!("Unknown argument to ctrlgen {arg}"),
+                        format!("Unknown argument `{arg}` to ctrlgen"),
                     ))
                 }
             };

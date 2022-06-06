@@ -207,7 +207,7 @@ impl InputData {
                 generics: parse_quote! { <Sender: ::ctrlgen::MessageSender<#enum_name>> },
             }));
         }
-        if let Some(proxy_impl) = self.params.proxy_impl.as_ref() {
+        for proxy_impl in self.params.proxy_impl.iter() {
             res.extend(self.generate_proxy_impl(proxy_impl));
         }
         res

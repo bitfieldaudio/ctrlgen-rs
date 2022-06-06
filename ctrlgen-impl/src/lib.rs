@@ -1,5 +1,6 @@
 use convert_case::Casing;
 use proc_macro2::TokenStream;
+use proc_macro2::TokenStream;
 use quote::quote as q;
 use syn::Ident;
 
@@ -106,9 +107,9 @@ mod parse_args;
 mod parse_input;
 
 pub fn ctrlgen_impl(
-    attrs: proc_macro2::TokenStream,
-    item: proc_macro2::TokenStream,
-) -> proc_macro2::TokenStream {
+    attrs: TokenStream,
+    item: TokenStream,
+) -> TokenStream {
     let input: TokenStream = item.into();
     let attrs: TokenStream = attrs.into();
 
@@ -118,7 +119,6 @@ pub fn ctrlgen_impl(
     let mut imp: syn::ItemImpl = syn::parse2(input).unwrap();
     let input_data = InputData::parse_inherent_impl(&mut imp, params);
 
-    ret.extend(quote::quote! {#imp});
     let params = &input_data.params;
 
     //dbg!(thetrait);
@@ -129,6 +129,7 @@ pub fn ctrlgen_impl(
     if let Some(proxy) = &params.proxy {
         input_data.generate_proxy(&mut ret, proxy);
     }
+    ret.extend(quote::quote! {#imp});
 
     ret.into()
 }

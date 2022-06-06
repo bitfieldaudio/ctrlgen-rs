@@ -21,6 +21,10 @@ impl Parse for Params {
 
         while input.peek(Token![,]){
             let _comma: Token![,] = input.parse()?;
+            if input.is_empty() {
+                // Allow trailing comma
+                break;
+            }
             let arg: syn::Ident = input.parse()?;
             match arg.to_string().as_str() {
                 "enum_attr" => {

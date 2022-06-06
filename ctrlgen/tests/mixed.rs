@@ -12,7 +12,7 @@ struct Service {
 
 #[ctrlgen::ctrlgen(pub ServiceMsg,
     returnval = LocalRetval,
-    proxy = ServiceProxy
+    proxy = ServiceProxy,
 )]
 impl Service {
     pub fn increment_by(&mut self, arg: i32) -> i32 {

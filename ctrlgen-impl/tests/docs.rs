@@ -59,7 +59,7 @@ fn preserve_documentation_enum() {
 #[test]
 fn preserve_documentation_proxy() {
     let params: Params = parse_quote! {
-        enum Msg, proxy_impl = Proxy
+        enum Msg, proxy(impl Proxy)
     };
     let mut block: ItemImpl = parse_quote! {
       impl Struct {
@@ -69,7 +69,7 @@ fn preserve_documentation_proxy() {
     };
 
     let input = InputData::parse_inherent_impl(&mut block, params).unwrap();
-    let generated: syn::ItemImpl = syn::parse2(input.generate_proxy()).unwrap();
+    let generated: syn::ItemImpl = syn::parse2(input.generate_proxies()).unwrap();
 
     match &generated.items[0] {
         syn::ImplItem::Method(x) => {
@@ -78,7 +78,7 @@ fn preserve_documentation_proxy() {
                 #[doc = r" Foo function"]
             };
             assert_eq!(doc, expected)
-        },
+        }
         _ => panic!("Expected only a method"),
     }
 }

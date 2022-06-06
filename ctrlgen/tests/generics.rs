@@ -11,7 +11,7 @@ struct Service<T: From<i32>> {
 
 #[ctrlgen::ctrlgen(pub enum ServiceMsg,
     returnval = LocalRetval,
-    proxy = ServiceProxy
+    proxy(struct ServiceProxy)
 )]
 impl<T: From<i32> + Into<i32> + Copy> Service<T> {
     pub fn increment_by(&mut self, arg: i32) -> i32 {
@@ -22,9 +22,7 @@ impl<T: From<i32> + Into<i32> + Copy> Service<T> {
 
 #[test]
 fn proxy() {
-    let service = RefCell::new(Service {
-        counter: 0,
-    });
+    let service = RefCell::new(Service { counter: 0 });
 
     // With proxy:
     let proxy = ServiceProxy::new(|msg: ServiceMsg| {

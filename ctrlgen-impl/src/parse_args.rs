@@ -1,10 +1,34 @@
-use crate::ProxyImpl;
 use syn::bracketed;
 use syn::parse::Parse;
+use syn::punctuated::Punctuated;
 use syn::Attribute;
 use syn::Token;
 
-use super::Params;
+use crate::Params;
+use crate::Proxy;
+use crate::ProxyImpl;
+
+impl Parse for Proxy {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        if input.peek(Token![struct]) {
+            let _kwd: Token![struct] = input.parse()?;
+            Ok(Self::Struct(input.parse()?))
+        } else if input.peek(Token![trait]) {
+            let _kwd: Token![trait] = input.parse()?;
+            Ok(Self::Trait(input.parse()?))
+        } else if input.peek(Token![impl]) {
+            let _kwd: Token![impl] = input.parse()?;
+            let generics = input.parse()?;
+            let path = input.parse()?;
+            Ok(Self::Impl(ProxyImpl { generics, path }))
+        } else {
+            Err(syn::Error::new(
+                input.span(),
+                "Expected `struct`, `trait` or `impl`",
+            ))
+        }
+    }
+}
 
 impl Parse for Params {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
@@ -21,8 +45,7 @@ impl Parse for Params {
 
         let enum_name: syn::Ident = input.parse()?;
         let mut returnval = None;
-        let mut proxy = None;
-        let mut proxy_impl = Vec::new();
+        let mut proxies = Vec::new();
 
         while input.peek(Token![,]) {
             let _comma: Token![,] = input.parse()?;
@@ -53,20 +76,15 @@ impl Parse for Params {
                     returnval = Some(input.parse()?)
                 }
                 "proxy" => {
-                    if proxy.is_some() {
-                        return Err(syn::Error::new_spanned(
-                            arg,
-                            "Argument `proxy` specified twice",
-                        ));
+                    let contents;
+                    if input.peek(syn::token::Paren) {
+                        let _paren = syn::parenthesized!(contents in input);
+                    } else {
+                        let _paren = syn::braced!(contents in input);
                     }
-                    let _eq: Token![=] = input.parse()?;
-                    proxy = Some(input.parse()?);
-                }
-                "proxy_impl" => {
-                    let generics = input.parse()?;
-                    let _eq: Token![=] = input.parse()?;
-                    let path = input.parse()?;
-                    proxy_impl.push(ProxyImpl { path, generics });
+                    let punct: Punctuated<Proxy, Token![;]> =
+                        Punctuated::parse_terminated(&contents)?;
+                    proxies.extend(punct)
                 }
                 _ => {
                     return Err(syn::Error::new(
@@ -81,8 +99,7 @@ impl Parse for Params {
             visibility,
             enum_name,
             returnval,
-            proxy,
-            proxy_impl,
+            proxies,
             enum_attr,
         })
     }

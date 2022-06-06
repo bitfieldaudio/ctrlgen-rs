@@ -1,6 +1,6 @@
 #![feature(generic_associated_types, type_alias_impl_trait)]
-use ctrlgen::Proxy;
 use ctrlgen::returnval::LocalRetval;
+use ctrlgen::Proxy;
 
 #[derive(Default)]
 struct Service {
@@ -10,7 +10,7 @@ struct Service {
 
 #[ctrlgen::ctrlgen(pub enum ServiceMsg,
     returnval = LocalRetval,
-    proxy_impl = ServiceProxy,
+    proxy(impl ServiceProxy),
 )]
 impl Service {
     pub fn increment_by(&mut self, arg: i32) -> i32 {

@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote as q;
-use syn::{WhereClause, Token, punctuated::Punctuated, parse_quote};
+use syn::{parse_quote, punctuated::Punctuated, Token, WhereClause};
 
 #[cfg(feature = "std")]
 fn borrow_toowned() -> TokenStream {
@@ -15,15 +15,19 @@ fn borrow_toowned() -> TokenStream {
     panic!("Cannot use borrow::ToOwned without either `std` or `alloc` features of ctrlgen")
 }
 
-use crate::ProxyImpl;
+use crate::{Proxy, ProxyImpl};
 
 use super::InputData;
 impl InputData {
     pub fn make_where_clause(&self) -> WhereClause {
-        let mut where_clause = self.generics.where_clause.clone().unwrap_or_else(|| WhereClause {
-            where_token: <Token![where]>::default(),
-            predicates: Punctuated::new(),
-        });
+        let mut where_clause = self
+            .generics
+            .where_clause
+            .clone()
+            .unwrap_or_else(|| WhereClause {
+                where_token: <Token![where]>::default(),
+                predicates: Punctuated::new(),
+            });
         if let Some(returnval_trait) = self.params.returnval.as_ref() {
             where_clause.predicates.push(parse_quote! {
                 #returnval_trait : ::ctrlgen::Returnval
@@ -86,7 +90,7 @@ impl InputData {
 
             variants.extend(q! {
                 #(#doc_attr)*
-                #(#custom_attributes)* 
+                #(#custom_attributes)*
                 #variant_name { #variant_params },
             });
         }
@@ -112,7 +116,7 @@ impl InputData {
         let struct_name = &self.name;
         let enum_name = &self.params.enum_name;
         let is_async = self.has_async_functions();
-        
+
         let error_type = if let Some(returnval_trait) = returnval_handler {
             q! {
                 <#returnval_trait as ::ctrlgen::Returnval>::SendError
@@ -197,30 +201,38 @@ impl InputData {
             }
         }
     }
-    pub fn generate_proxy(&self) -> TokenStream {
+
+    pub fn generate_proxies(&self) -> TokenStream {
         let mut res = TokenStream::new();
-        if let Some(proxy) = self.params.proxy.as_ref() {
-            let enum_name = &self.params.enum_name;
-            res.extend(self.generate_proxy_struct());
-            res.extend(self.generate_proxy_impl(&ProxyImpl {
-                path: parse_quote! { #proxy<Sender> },
-                generics: parse_quote! { <Sender: ::ctrlgen::MessageSender<#enum_name>> },
-            }));
-        }
-        for proxy_impl in self.params.proxy_impl.iter() {
-            res.extend(self.generate_proxy_impl(proxy_impl));
+        for proxy in self.params.proxies.iter() {
+            res.extend(self.generate_proxy(proxy))
         }
         res
     }
 
-    pub fn generate_proxy_struct(&self) -> TokenStream {
-        if self.params.proxy.is_none() {
-            return TokenStream::new();
+    pub fn generate_proxy(&self, proxy: &Proxy) -> TokenStream {
+        match proxy {
+            crate::Proxy::Struct(proxy) => {
+                let mut res = TokenStream::new();
+                let enum_name = &self.params.enum_name;
+                res.extend(self.generate_proxy_struct(proxy));
+                res.extend(self.generate_proxy_impl(&ProxyImpl {
+                    path: parse_quote! { #proxy<Sender> },
+                    generics: parse_quote! { <Sender: ::ctrlgen::MessageSender<#enum_name>> },
+                }));
+                res
+            }
+            crate::Proxy::Trait(_) => {
+                todo!()
+            }
+            crate::Proxy::Impl(proxy_impl) => self.generate_proxy_impl(proxy_impl),
         }
-        let proxy_name = self.params.proxy.as_ref().unwrap();
+    }
+
+    pub fn generate_proxy_struct(&self, proxy_name: &syn::Ident) -> TokenStream {
         let enum_name = &self.params.enum_name;
         let visibility = &self.params.visibility;
-        
+
         q! {
             #visibility struct #proxy_name<Sender: ::ctrlgen::MessageSender<#enum_name>> {
                 sender: Sender
@@ -230,7 +242,7 @@ impl InputData {
                 fn send(&self, msg: #enum_name) {
                     self.sender.send(msg)
                 }
-            } 
+            }
 
             impl<Sender: ::ctrlgen::MessageSender<#enum_name>> #proxy_name<Sender> {
                 #visibility fn new(sender: Sender) -> Self {
@@ -239,7 +251,7 @@ impl InputData {
             }
         }
     }
-    
+
     pub fn generate_proxy_impl(&self, impl_: &ProxyImpl) -> TokenStream {
         let returnval_handler = self.params.returnval.as_ref();
         let proxy_path = &impl_.path;
@@ -284,8 +296,8 @@ impl InputData {
                 })
             }
         }
-        let mut where_clause: WhereClause = parse_quote!{ 
-            where 
+        let mut where_clause: WhereClause = parse_quote! {
+            where
                 Self: ::ctrlgen::Proxy<#enum_name>,
         };
         if let Some(returnval_trait) = returnval_handler {
@@ -309,6 +321,5 @@ impl InputData {
                 #methods
             }
         }
-
     }
 }

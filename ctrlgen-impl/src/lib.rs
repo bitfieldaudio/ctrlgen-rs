@@ -82,11 +82,16 @@ pub struct ProxyImpl {
     generics: syn::Generics,
 }
 
+pub enum Proxy {
+    Struct(syn::Ident),
+    Trait(syn::Ident),
+    Impl(ProxyImpl),
+}
+
 pub struct Params {
     visibility: syn::Visibility,
     returnval: Option<syn::Type>,
-    proxy: Option<syn::Ident>,
-    proxy_impl: Vec<ProxyImpl>,
+    proxies: Vec<Proxy>,
     enum_attr: Vec<syn::Attribute>,
     enum_name: Ident,
 }
@@ -104,8 +109,8 @@ pub fn ctrlgen_impl(attrs: TokenStream, input: TokenStream) -> syn::Result<Token
 
     ret.extend(input_data.generate_enum());
     ret.extend(input_data.generate_call_impl());
-    ret.extend(input_data.generate_proxy());
+    ret.extend(input_data.generate_proxies());
     ret.extend(quote::quote! {#imp});
-    
+
     syn::Result::<TokenStream>::Ok(ret)
 }

@@ -28,6 +28,10 @@ impl Parse for Params {
                 // Allow trailing comma
                 break;
             }
+            if input.peek(Token![#]) {
+                enum_attr.extend(Attribute::parse_outer(input)?);
+                continue;
+            }
             let arg: syn::Ident = input.parse()?;
             match arg.to_string().as_str() {
                 "enum_attr" => {

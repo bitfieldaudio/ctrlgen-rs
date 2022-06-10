@@ -82,3 +82,10 @@ impl<Msg: core::fmt::Debug> MessageSender<Msg> for tokio::sync::mpsc::UnboundedS
         self.send(msg).unwrap()
     }
 }
+
+#[cfg(feature = "flume")]
+impl<Msg: core::fmt::Debug> MessageSender<Msg> for flume::Sender<Msg> {
+    fn send(&self, msg: Msg) {
+        self.send(msg).unwrap()
+    }
+}

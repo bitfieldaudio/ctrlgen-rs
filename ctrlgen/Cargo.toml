@@ -9,3 +9,4 @@ tokio = { version = "1.17", features=["sync", "rt", "macros"], optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 futures = "0.3.21"
 ctrlgen-derive = { path = "../ctrlgen-derive" }
+flume = { version = "0.10.13", optional = true }

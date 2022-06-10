@@ -1,8 +1,7 @@
 use std::convert::Infallible;
 use std::task::Poll;
-
-use futures::{pin_mut, FutureExt};
 use tokio::sync::oneshot;
+use futures_lite::pin;
 
 #[derive(Debug)]
 enum Inner<T> {
@@ -99,9 +98,9 @@ impl<T> Promise<T> {
         T: Send + 'static,
     {
         let (tx, res) = Promise::channel();
-        tokio::spawn(FutureExt::map(fut, |x| {
-            let _ = tx.send(x);
-        }));
+        tokio::spawn(async {
+            tx.send(fut.await)
+        });
         res
     }
 
@@ -162,11 +161,11 @@ impl<T> Promise<T> {
         U: Send + 'static,
     {
         let (tx, res) = Promise::channel();
-        tokio::spawn(FutureExt::map(self, |x| {
-            if let Some(x) = x {
+        tokio::spawn(async {
+            if let Some(x) = self.await {
                 let _ = tx.send(f(x));
             }
-        }));
+        });
         res
     }
 
@@ -180,17 +179,17 @@ impl<T> Promise<T> {
         Fut::Output: Send + 'static,
     {
         let (tx, res) = Promise::channel();
-        tokio::spawn(FutureExt::map(self, |x| async {
-            if let Some(x) = x {
+        tokio::spawn(async {
+            if let Some(x) = self.await {
                 let _ = tx.send(f(x).await);
             }
-        }));
+        });
         res
     }
 
     /// Block the current thread, waiting for the promise to be resolved
     pub fn block_on(self) -> Option<T> {
-        futures::executor::block_on(self)
+        futures_lite::future::block_on(self)
     }
 }
 
@@ -220,7 +219,7 @@ impl<T> std::future::Future for Promise<T> {
             Inner::Ready(x) => Poll::Ready(Some(unsafe { std::ptr::read(x as *mut T) })),
             Inner::Empty => Poll::Ready(None),
             Inner::Pending(rx) => {
-                pin_mut!(rx);
+                pin!(rx);
                 rx.poll(cx).map(|x| x.ok())
             }
         }

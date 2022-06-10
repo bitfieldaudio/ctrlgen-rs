@@ -1,5 +1,7 @@
 #![feature(try_trait_v2, generic_associated_types, type_alias_impl_trait)]
 #![doc = include_str!("../../README.md")]
+
+#[cfg(feature = "tokio")]
 pub mod promise;
 pub mod returnval;
 
@@ -74,6 +76,7 @@ where
     }
 }
 
+#[cfg(feature = "tokio")]
 impl<Msg: core::fmt::Debug> MessageSender<Msg> for tokio::sync::mpsc::UnboundedSender<Msg> {
     fn send(&self, msg: Msg) {
         self.send(msg).unwrap()

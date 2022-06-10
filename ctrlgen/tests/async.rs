@@ -63,6 +63,7 @@ impl Service {
 //     }
 // }
 
+#[cfg(feature = "tokio")]
 #[tokio::test]
 async fn call_mut_works() {
     let mut service = Service {

@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::quote as q;
+use quote::{quote as q, quote_spanned};
 use syn::{parse_quote, punctuated::Punctuated, Token, WhereClause};
 
 #[cfg(feature = "std")]
@@ -276,8 +276,9 @@ impl InputData {
                     #arg_name,
                 });
             }
+            let span = method.name.span();
             if let (Some(ret), Some(returnval_trait)) = (&method.ret, returnval_handler) {
-                methods.extend(q! {
+                methods.extend(quote_spanned! { span=>
                     #(#doc_attr)*
                     #visibility fn #method_name(&self, #args) -> <#returnval_trait as ::ctrlgen::Returnval>::RecvResult<#ret> {
                         let ret = <#returnval_trait as ::ctrlgen::Returnval>::create();
@@ -287,7 +288,7 @@ impl InputData {
                     }
                 })
             } else {
-                methods.extend(q! {
+                methods.extend(quote_spanned! { span=>
                     #(#doc_attr)*
                     #visibility fn #method_name(&self, #args) {
                         let msg = #enum_name::#variant_name { #arg_names };
@@ -347,8 +348,9 @@ impl InputData {
                     #arg_name,
                 });
             }
+            let span = method.name.span();
             if let (Some(ret), Some(returnval_trait)) = (&method.ret, returnval_handler) {
-                methods.extend(q! {
+                methods.extend(quote_spanned! { span=>
                     #(#doc_attr)*
                     fn #method_name(&self, #args) -> <#returnval_trait as ::ctrlgen::Returnval>::RecvResult<#ret> {
                         let ret = <#returnval_trait as ::ctrlgen::Returnval>::create();
@@ -358,7 +360,7 @@ impl InputData {
                     }
                 })
             } else {
-                methods.extend(q! {
+                methods.extend(quote_spanned! { span=>
                     #(#doc_attr)*
                     fn #method_name(&self, #args) {
                         let msg = #enum_name::#variant_name { #arg_names };

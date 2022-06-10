@@ -188,8 +188,8 @@ impl InputData {
                 #where_clause
                 {
                     type Error = #error_type;
-                    type Future<'a> = impl core::future::Future<Output = ::core::result::Result<(), Self::Error>> + 'a
-                        where #struct_name #struct_args: 'a;
+                    type Future<'__ctrlgen__lifetime> = impl core::future::Future<Output = ::core::result::Result<(), Self::Error>> + '__ctrlgen__lifetime
+                        where #struct_name #struct_args: '__ctrlgen__lifetime;
                     fn call_mut_async(self, this: &mut #struct_name #struct_args) -> Self::Future<'_> {
                         async {
                             match self {

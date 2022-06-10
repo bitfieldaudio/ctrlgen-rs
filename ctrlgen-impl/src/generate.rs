@@ -190,7 +190,7 @@ impl InputData {
                     type Error = #error_type;
                     type Future<'__ctrlgen__lifetime> = impl core::future::Future<Output = ::core::result::Result<(), Self::Error>> + '__ctrlgen__lifetime
                         where #struct_name #struct_args: '__ctrlgen__lifetime;
-                    fn call_mut_async(self, this: &mut #struct_name #struct_args) -> Self::Future<'_> {
+                    fn call_mut_async<'__ctrlgen__lifetime>(self, this: &'__ctrlgen__lifetime mut #struct_name #struct_args) -> Self::Future<'__ctrlgen__lifetime> {
                         async {
                             match self {
                                 #cases

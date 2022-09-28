@@ -3,6 +3,7 @@ use convert_case::Casing;
 use proc_macro2::TokenStream;
 use quote::quote as q;
 use syn::Ident;
+use syn::Token;
 
 struct Argument {
     name: Ident,
@@ -83,9 +84,7 @@ pub struct ProxyImpl {
 }
 
 pub enum Proxy {
-    Struct(syn::Ident),
-    Trait(syn::Ident),
-    Impl(ProxyImpl),
+    Trait(Token![trait], syn::Ident),
 }
 
 pub struct Params {

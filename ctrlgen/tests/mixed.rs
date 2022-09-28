@@ -12,7 +12,6 @@ struct Service {
 
 #[ctrlgen::ctrlgen(pub enum ServiceMsg,
     returnval = LocalRetval,
-    proxy(struct ServiceProxy),
 )]
 impl Service {
     pub fn increment_by(&mut self, arg: i32) -> i32 {
@@ -88,14 +87,14 @@ fn proxy() {
     let msg = ServiceMsg::SetFlag { flag: true };
     msg.call_mut(&mut *service.borrow_mut()).unwrap();
 
-    // With proxy:
-    let proxy = ServiceProxy::new(|msg: ServiceMsg| {
-        msg.call_mut(&mut *service.borrow_mut()).unwrap();
-    });
+    // // With proxy:
+    // let proxy = ServiceProxy::new(|msg: ServiceMsg| {
+    //     msg.call_mut(&mut *service.borrow_mut()).unwrap();
+    // });
 
-    let ret = proxy.increment_by(2);
-    assert_eq!(*ret.borrow(), Some(2));
-    assert_eq!(service.borrow().counter, 2);
+    // let ret = proxy.increment_by(2);
+    // assert_eq!(*ret.borrow(), Some(2));
+    // assert_eq!(service.borrow().counter, 2);
 }
 
 // impl CallMutAsync<Service> for ServiceMsg

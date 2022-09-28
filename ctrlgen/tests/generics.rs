@@ -3,6 +3,7 @@ use std::cell::RefCell;
 
 use ctrlgen::returnval::LocalRetval;
 use ctrlgen::CallMut;
+use ctrlgen::FnProxy;
 
 #[derive(Default)]
 struct Service<T: From<i32>> {
@@ -11,7 +12,7 @@ struct Service<T: From<i32>> {
 
 #[ctrlgen::ctrlgen(pub enum ServiceMsg,
     returnval = LocalRetval,
-    proxy(struct ServiceProxy)
+    proxy(trait ServiceProxyTrait)
 )]
 impl<T: From<i32> + Into<i32> + Copy> Service<T> {
     pub fn increment_by(&mut self, arg: i32) -> i32 {
@@ -25,7 +26,7 @@ fn proxy() {
     let service = RefCell::new(Service { counter: 0 });
 
     // With proxy:
-    let proxy = ServiceProxy::new(|msg: ServiceMsg| {
+    let proxy = FnProxy::new(|msg: ServiceMsg| {
         msg.call_mut(&mut *service.borrow_mut()).unwrap();
     });
 

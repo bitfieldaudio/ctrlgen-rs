@@ -12,10 +12,6 @@ use std::marker::PhantomData;
 
 pub use ctrlgen_derive::ctrlgen;
 
-pub trait MessageSender<Msg> {
-    fn send(&self, msg: Msg);
-}
-
 pub trait Proxy<Msg> {
     fn send(&self, msg: Msg);
 }
@@ -46,15 +42,6 @@ pub trait AsyncReturnval {
     fn async_recv<T>(rx: Self::Receiver<T>) -> Self::RecvFuture<T>;
 }
 
-impl<T, Msg> MessageSender<Msg> for T
-where
-    T: Fn(Msg),
-{
-    fn send(&self, msg: Msg) {
-        self(msg)
-    }
-}
-
 pub trait CallMut<Service> {
     type Error;
     fn call_mut(self, service: &mut Service) -> core::result::Result<(), Self::Error>;
@@ -81,51 +68,60 @@ where
     }
 }
 
-pub struct BasicProxy<Msg, Sender>
-where
-    Sender: MessageSender<Msg>,
-{
-    sender: Sender,
-    _phantom: PhantomData<Msg>,
+#[cfg(feature = "flume")]
+pub struct FlumeProxy<Msg> {
+    sender: flume::Sender<Msg>,
 }
 
-impl<Msg, Sender> Proxy<Msg> for BasicProxy<Msg, Sender>
-where
-    Sender: MessageSender<Msg>,
-{
-    fn send(&self, msg: Msg) {
-        self.sender.send(msg)
+#[cfg(feature = "flume")]
+impl<Msg> FlumeProxy<Msg> {
+    pub fn new(sender: flume::Sender<Msg>) -> Self {
+        Self { sender }
     }
 }
 
-impl<Msg, Sender> BasicProxy<Msg, Sender>
-where
-    Sender: MessageSender<Msg>,
-{
-    pub fn new(sender: Sender) -> Self {
+#[cfg(feature = "flume")]
+impl<Msg: core::fmt::Debug> Proxy<Msg> for FlumeProxy<Msg> {
+    fn send(&self, msg: Msg) {
+        self.sender.send(msg).unwrap()
+    }
+}
+
+#[cfg(feature = "tokio")]
+pub struct TokioProxy<Msg> {
+    sender: tokio::sync::mpsc::UnboundedSender<Msg>,
+}
+
+#[cfg(feature = "tokio")]
+impl<Msg> TokioProxy<Msg> {
+    pub fn new(sender: tokio::sync::mpsc::UnboundedSender<Msg>) -> Self {
+        Self { sender }
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl<Msg: core::fmt::Debug> Proxy<Msg> for TokioProxy<Msg> {
+    fn send(&self, msg: Msg) {
+        self.sender.send(msg).unwrap()
+    }
+}
+
+pub struct FnProxy<Msg, F: Fn(Msg)> {
+    f: F,
+    _phantom: PhantomData<Msg>,
+}
+
+impl<Msg, F: Fn(Msg)> FnProxy<Msg, F> {
+    pub fn new(f: F) -> Self {
         Self {
-            sender,
-            _phantom: Default::default(),
+            f,
+            _phantom: PhantomData,
         }
     }
 }
 
-#[cfg(feature = "tokio")]
-impl<Msg: core::fmt::Debug> MessageSender<Msg> for tokio::sync::mpsc::UnboundedSender<Msg> {
+impl<Msg, F: Fn(Msg)> Proxy<Msg> for FnProxy<Msg, F> {
     fn send(&self, msg: Msg) {
-        self.send(msg).unwrap()
+        (self.f)(msg)
     }
 }
-
-#[cfg(feature = "tokio")]
-pub type TokioProxy<Msg> = BasicProxy<Msg, tokio::sync::mpsc::UnboundedSender<Msg>>;
-
-#[cfg(feature = "flume")]
-impl<Msg: core::fmt::Debug> MessageSender<Msg> for flume::Sender<Msg> {
-    fn send(&self, msg: Msg) {
-        self.send(msg).unwrap()
-    }
-}
-
-#[cfg(feature = "flume")]
-pub type FlumeProxy<Msg> = BasicProxy<Msg, flume::Sender<Msg>>;

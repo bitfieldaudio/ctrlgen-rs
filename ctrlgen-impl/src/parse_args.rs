@@ -6,21 +6,21 @@ use syn::Token;
 
 use crate::Params;
 use crate::Proxy;
-use crate::ProxyImpl;
 
 impl Parse for Proxy {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if input.peek(Token![struct]) {
-            let _kwd: Token![struct] = input.parse()?;
-            Ok(Self::Struct(input.parse()?))
-        } else if input.peek(Token![trait]) {
-            let _kwd: Token![trait] = input.parse()?;
-            Ok(Self::Trait(input.parse()?))
-        } else if input.peek(Token![impl]) {
-            let _kwd: Token![impl] = input.parse()?;
-            let generics = input.parse()?;
-            let path = input.parse()?;
-            Ok(Self::Impl(ProxyImpl { generics, path }))
+        // if input.peek(Token![struct]) {
+        //     let _kwd: Token![struct] = input.parse()?;
+        //     Ok(Self::Struct(input.parse()?))
+        // } else 
+        if input.peek(Token![trait]) {
+            let kwd: Token![trait] = input.parse()?;
+            Ok(Self::Trait(kwd, input.parse()?))
+        // } else if input.peek(Token![impl]) {
+        //     let _kwd: Token![impl] = input.parse()?;
+        //     let generics = input.parse()?;
+        //     let path = input.parse()?;
+        //     Ok(Self::Impl(ProxyImpl { generics, path }))
         } else {
             Err(syn::Error::new(
                 input.span(),
@@ -53,6 +53,11 @@ impl Parse for Params {
                 // Allow trailing comma
                 break;
             }
+            if input.peek(Token![trait]) {
+                proxies.extend(input.parse());
+                continue;
+            }
+            
             let arg: syn::Ident = input.parse()?;
             match arg.to_string().as_str() {
                 "enum_attr" => {

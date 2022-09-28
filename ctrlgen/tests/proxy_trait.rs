@@ -22,28 +22,6 @@ impl Service {
 }
 
 #[test]
-fn proxy_trait_impl_directly() {
-    struct ServiceProxy {
-        service: RefCell<Service>,
-    }
-
-    impl ServiceProxyTrait for ServiceProxy {
-        fn send(&self, msg: ServiceMsg) {
-            msg.call_mut(&mut *self.service.borrow_mut());
-        }
-    }
-
-    let proxy = ServiceProxy {
-        service: RefCell::new(Service {
-            counter: 0
-        })
-    };
-
-    proxy.increment_by(2);
-    assert!(proxy.service.borrow().counter == 2);
-}
-
-#[test]
 fn proxy_trait_impl_proxy() {
     struct ServiceProxy1 {
         service: RefCell<Service>,

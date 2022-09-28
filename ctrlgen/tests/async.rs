@@ -9,7 +9,7 @@ struct Service {
 
 #[ctrlgen::ctrlgen(pub enum ServiceMsg,
     returnval = ctrlgen::returnval::LocalRetval,
-    proxy(struct ServiceProxy)
+    proxy(trait ServiceProxyTrait)
 )]
 impl Service {
     pub fn increment_by(&mut self, arg: i32) -> i32 {

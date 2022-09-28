@@ -205,7 +205,7 @@ impl InputData {
     pub fn generate_proxies(&self) -> TokenStream {
         let mut res = TokenStream::new();
         for proxy in self.params.proxies.iter() {
-            res.extend(self.generate_proxy(proxy))
+            res.extend(self.generate_proxy(proxy));
         }
         res
     }

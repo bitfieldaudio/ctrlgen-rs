@@ -5,6 +5,11 @@
 pub mod promise;
 pub mod returnval;
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+use std::marker::PhantomData;
+
 pub use ctrlgen_derive::ctrlgen;
 
 pub trait MessageSender<Msg> {
@@ -76,6 +81,35 @@ where
     }
 }
 
+pub struct BasicProxy<Msg, Sender>
+where
+    Sender: MessageSender<Msg>,
+{
+    sender: Sender,
+    _phantom: PhantomData<Msg>,
+}
+
+impl<Msg, Sender> Proxy<Msg> for BasicProxy<Msg, Sender>
+where
+    Sender: MessageSender<Msg>,
+{
+    fn send(&self, msg: Msg) {
+        self.sender.send(msg)
+    }
+}
+
+impl<Msg, Sender> BasicProxy<Msg, Sender>
+where
+    Sender: MessageSender<Msg>,
+{
+    pub fn new(sender: Sender) -> Self {
+        Self {
+            sender,
+            _phantom: Default::default(),
+        }
+    }
+}
+
 #[cfg(feature = "tokio")]
 impl<Msg: core::fmt::Debug> MessageSender<Msg> for tokio::sync::mpsc::UnboundedSender<Msg> {
     fn send(&self, msg: Msg) {
@@ -83,9 +117,15 @@ impl<Msg: core::fmt::Debug> MessageSender<Msg> for tokio::sync::mpsc::UnboundedS
     }
 }
 
+#[cfg(feature = "tokio")]
+pub type TokioProxy<Msg> = BasicProxy<Msg, tokio::sync::mpsc::UnboundedSender<Msg>>;
+
 #[cfg(feature = "flume")]
 impl<Msg: core::fmt::Debug> MessageSender<Msg> for flume::Sender<Msg> {
     fn send(&self, msg: Msg) {
         self.send(msg).unwrap()
     }
 }
+
+#[cfg(feature = "flume")]
+pub type FlumeProxy<Msg> = BasicProxy<Msg, flume::Sender<Msg>>;

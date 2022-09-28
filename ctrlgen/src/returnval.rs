@@ -1,8 +1,10 @@
 use crate::Returnval;
 
-use std::cell::RefCell;
-use std::convert::Infallible;
-use std::rc::Rc;
+use core::cell::RefCell;
+use core::convert::Infallible;
+
+#[cfg(feature = "alloc")]
+use alloc::rc::Rc;
 
 #[derive(Debug)]
 pub struct FailedToSendRetval;
@@ -13,7 +15,10 @@ impl std::fmt::Display for FailedToSendRetval {
     }
 }
 
+#[cfg(feature = "alloc")]
 pub struct LocalRetval;
+
+#[cfg(feature = "alloc")]
 impl Returnval for LocalRetval {
     type Sender<T> = Rc<RefCell<Option<T>>>;
     type Receiver<T> = Rc<RefCell<Option<T>>>;

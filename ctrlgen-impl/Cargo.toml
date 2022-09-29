@@ -1,6 +1,9 @@
 [package]
 name = "ctrlgen-impl"
-version = "0.1.0"
+version.workspace = true
+license.workspace = true
+description.workspace = true
+author.workspace = true
 edition = "2021"
 
 [dependencies]

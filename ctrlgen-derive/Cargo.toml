@@ -1,11 +1,14 @@
 [package]
 name = "ctrlgen-derive"
-version = "0.1.0"
+version.workspace = true
+license.workspace = true
+description.workspace = true
+author.workspace = true
 edition = "2021"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-ctrlgen-impl = { path = "../ctrlgen-impl" }
+ctrlgen-impl.workspace = true
 proc-macro2 = "1.0.36"

@@ -1,5 +1,5 @@
 #![feature(try_trait_v2, type_alias_impl_trait)]
-#![doc = include_str!("../../README.md")]
+#![doc = include_str!("../README.md")]
 
 #[cfg(feature = "support")]
 pub mod support;

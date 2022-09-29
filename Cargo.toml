@@ -4,3 +4,13 @@ members = [
   "ctrlgen-impl",
   "ctrlgen-derive"
 ]
+
+[workspace.package]
+version = "0.2.0"
+license = "MIT"
+description = "Generate enums for message-passing services"
+author = "Tobias Pisani <topisani@hamsterpoison.com>"
+
+[workspace.dependencies]
+ctrlgen-impl = { version = "0.2.0", path = "ctrlgen-impl"}
+ctrlgen-derive = { version = "0.2.0", path = "ctrlgen-derive"}

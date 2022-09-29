@@ -15,7 +15,7 @@ fn borrow_toowned() -> TokenStream {
     panic!("Cannot use borrow::ToOwned without either `std` or `alloc` features of ctrlgen")
 }
 
-use crate::{Proxy, ProxyImpl};
+use crate::{Proxy};
 
 use super::InputData;
 impl InputData {

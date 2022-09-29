@@ -1,7 +1,6 @@
-#![feature(generic_associated_types, type_alias_impl_trait)]
 use std::cell::RefCell;
 
-use ctrlgen::returnval::LocalRetval;
+use ctrlgen::support::LocalRetval;
 use ctrlgen::CallMut;
 
 #[derive(Default)]
@@ -10,7 +9,8 @@ struct Service {
     flag: bool,
 }
 
-#[ctrlgen::ctrlgen(pub enum ServiceMsg,
+#[ctrlgen::ctrlgen(
+    pub enum ServiceMsg,
     returnval = LocalRetval,
 )]
 impl Service {

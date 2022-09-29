@@ -1,7 +1,7 @@
-#![feature(generic_associated_types, type_alias_impl_trait)]
+#![feature(type_alias_impl_trait)]
 use std::cell::RefCell;
 
-use ctrlgen::returnval::LocalRetval;
+use ctrlgen::support::LocalRetval;
 use ctrlgen::CallMut;
 use ctrlgen::Proxy;
 
@@ -29,7 +29,7 @@ fn proxy_trait_impl_proxy() {
 
     impl Proxy<ServiceMsg> for ServiceProxy1 {
         fn send(&self, msg: ServiceMsg) {
-            msg.call_mut(&mut *self.service.borrow_mut());
+            msg.call_mut(&mut *self.service.borrow_mut()).unwrap();
         }
     }
 

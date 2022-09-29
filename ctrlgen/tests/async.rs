@@ -1,5 +1,5 @@
-#![feature(generic_associated_types, type_alias_impl_trait)]
-use ctrlgen::CallMutAsync;
+#![feature(type_alias_impl_trait)]
+
 
 #[derive(Default)]
 struct Service {
@@ -8,7 +8,7 @@ struct Service {
 }
 
 #[ctrlgen::ctrlgen(pub enum ServiceMsg,
-    returnval = ctrlgen::returnval::LocalRetval,
+    returnval = ctrlgen::support::LocalRetval,
     proxy(trait ServiceProxyTrait)
 )]
 impl Service {

@@ -68,7 +68,7 @@ fn preserve_documentation_proxy() {
       }
     };
 
-    let input = InputData::parse_inherent_impl(&mut block, params).unwrap();
+    let _input = InputData::parse_inherent_impl(&mut block, params).unwrap();
     // syn::Item
     // let generated: syn::Item= syn::parse2(input.generate_proxies()).unwrap();
 

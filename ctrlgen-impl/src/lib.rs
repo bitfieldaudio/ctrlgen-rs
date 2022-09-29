@@ -78,11 +78,6 @@ impl InputData {
     }
 }
 
-pub struct ProxyImpl {
-    path: syn::TypePath,
-    generics: syn::Generics,
-}
-
 pub enum Proxy {
     Trait(Token![trait], syn::Ident),
 }

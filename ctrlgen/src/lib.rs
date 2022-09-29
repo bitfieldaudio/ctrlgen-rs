@@ -1,16 +1,14 @@
-#![feature(try_trait_v2, generic_associated_types, type_alias_impl_trait)]
+#![feature(try_trait_v2, type_alias_impl_trait)]
 #![doc = include_str!("../../README.md")]
 
-#[cfg(feature = "tokio")]
-pub mod promise;
-pub mod returnval;
+#[cfg(feature = "support")]
+pub mod support;
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-use std::marker::PhantomData;
-
 pub use ctrlgen_derive::ctrlgen;
+
 
 pub trait Proxy<Msg> {
     fn send(&self, msg: Msg);
@@ -68,60 +66,3 @@ where
     }
 }
 
-#[cfg(feature = "flume")]
-pub struct FlumeProxy<Msg> {
-    sender: flume::Sender<Msg>,
-}
-
-#[cfg(feature = "flume")]
-impl<Msg> FlumeProxy<Msg> {
-    pub fn new(sender: flume::Sender<Msg>) -> Self {
-        Self { sender }
-    }
-}
-
-#[cfg(feature = "flume")]
-impl<Msg: core::fmt::Debug> Proxy<Msg> for FlumeProxy<Msg> {
-    fn send(&self, msg: Msg) {
-        self.sender.send(msg).unwrap()
-    }
-}
-
-#[cfg(feature = "tokio")]
-pub struct TokioProxy<Msg> {
-    sender: tokio::sync::mpsc::UnboundedSender<Msg>,
-}
-
-#[cfg(feature = "tokio")]
-impl<Msg> TokioProxy<Msg> {
-    pub fn new(sender: tokio::sync::mpsc::UnboundedSender<Msg>) -> Self {
-        Self { sender }
-    }
-}
-
-#[cfg(feature = "tokio")]
-impl<Msg: core::fmt::Debug> Proxy<Msg> for TokioProxy<Msg> {
-    fn send(&self, msg: Msg) {
-        self.sender.send(msg).unwrap()
-    }
-}
-
-pub struct FnProxy<Msg, F: Fn(Msg)> {
-    f: F,
-    _phantom: PhantomData<Msg>,
-}
-
-impl<Msg, F: Fn(Msg)> FnProxy<Msg, F> {
-    pub fn new(f: F) -> Self {
-        Self {
-            f,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-impl<Msg, F: Fn(Msg)> Proxy<Msg> for FnProxy<Msg, F> {
-    fn send(&self, msg: Msg) {
-        (self.f)(msg)
-    }
-}

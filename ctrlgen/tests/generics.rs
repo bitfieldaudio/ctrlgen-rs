@@ -1,9 +1,9 @@
-#![feature(generic_associated_types, type_alias_impl_trait)]
+#![feature(type_alias_impl_trait)]
 use std::cell::RefCell;
 
-use ctrlgen::returnval::LocalRetval;
+use ctrlgen::support::LocalRetval;
 use ctrlgen::CallMut;
-use ctrlgen::FnProxy;
+use ctrlgen::support::FnProxy;
 
 #[derive(Default)]
 struct Service<T: From<i32>> {

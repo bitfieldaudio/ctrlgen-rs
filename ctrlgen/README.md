@@ -30,9 +30,10 @@ struct Service<T: From<i32>> {
     counter: T,
 }
 
-#[ctrlgen::ctrlgen(pub ServiceMsg,
+#[ctrlgen::ctrlgen(
+    pub enum ServiceMsg,
+    trait ServiceProxy,
     returnval = TokioRetval,
-    proxy = ServiceProxy
 )]
 impl Service {
     pub fn increment_by(&mut self, arg: i32) -> i32 {
@@ -42,7 +43,7 @@ impl Service {
 }
 ```
 
-This will generate the following code:
+This will generate something similar to the following code:
 
 ```rust,ignore
 pub enum ServiceMsg
@@ -67,23 +68,17 @@ where TokioRetval: ::ctrlgen::Returnval,
     }
 }
 
-pub struct ServiceProxy<Sender: ::ctrlgen::MessageSender<ServiceMsg>> {
-    sender: Sender,
-}
-
-impl<Sender: ::ctrlgen::MessageSender<ServiceMsg>> ServiceProxy<Sender>
-where TokioRetval: ::ctrlgen::Returnval,
+pub trait ServiceProxy: ::ctrlgen::Proxy<ServiceMsg>
 {
-    pub fn new(sender: Sender) -> Self {
-        Self { sender }
-    }
-    pub fn increment_by(&self, arg: i32) -> <TokioRetval as ::ctrlgen::Returnval>::RecvResult<i32> {
+    fn increment_by(&self, arg: i32) -> <TokioRetval as ::ctrlgen::Returnval>::RecvResult<i32> {
         let ret = <TokioRetval as ::ctrlgen::Returnval>::create();
         let msg = ServiceMsg::IncrementBy { arg, ret: ret.0 };
-        self.sender.send(msg);
+        ::ctrlgen::Proxy::send(self, msg);
         <TokioRetval as ::ctrlgen::Returnval>::recv(ret.1)
     }
 }
+
+impl<T: ::ctrlgen::Proxy<ServiceMsg>> ServiceProxy for T {}
 ```
 ## Returnval
 

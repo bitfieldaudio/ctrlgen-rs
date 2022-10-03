@@ -21,3 +21,6 @@ alloc = []
 support = []
 default = ["alloc", "support"]
 std = ["alloc"]
+
+[dev-dependencies]
+insta = { version = "1.21.0", features = ["yaml"] }

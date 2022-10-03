@@ -68,18 +68,8 @@ fn preserve_documentation_proxy() {
       }
     };
 
-    let _input = InputData::parse_inherent_impl(&mut block, params).unwrap();
-    // syn::Item
-    // let generated: syn::Item= syn::parse2(input.generate_proxies()).unwrap();
+    let input = InputData::parse_inherent_impl(&mut block, params).unwrap();
+    let generated = input.generate_proxies();
 
-    // match &generated.items[0] {
-    //     syn::TraitItem::Method(x) => {
-    //         let doc = x.attrs[0].clone();
-    //         let expected: syn::Attribute = parse_quote! {
-    //             #[doc = r" Foo function"]
-    //         };
-    //         assert_eq!(doc, expected)
-    //     }
-    //     _ => panic!("Expected only a method"),
-    // }
+    insta::assert_snapshot!(generated.to_string());
 }

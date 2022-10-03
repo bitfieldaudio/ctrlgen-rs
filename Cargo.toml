@@ -14,3 +14,9 @@ author = "Tobias Pisani <topisani@hamsterpoison.com>"
 [workspace.dependencies]
 ctrlgen-impl = { version = "0.2.0", path = "ctrlgen-impl"}
 ctrlgen-derive = { version = "0.2.0", path = "ctrlgen-derive"}
+
+[profile.dev.package.insta]
+opt-level = 3
+
+[profile.dev.package.similar]
+opt-level = 3

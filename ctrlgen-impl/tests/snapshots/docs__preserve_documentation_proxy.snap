@@ -1,0 +1,5 @@
+---
+source: ctrlgen-impl/tests/docs.rs
+expression: generated.to_string()
+---
+trait Proxy : :: ctrlgen :: Proxy < Msg > { # [doc = r" Foo function"] fn foo (& self ,) { let msg = Msg :: Foo { } ; < Self as :: ctrlgen :: Proxy < Msg >> :: send (self , msg) ; } } impl < T : :: ctrlgen :: Proxy < Msg >> Proxy for T { }

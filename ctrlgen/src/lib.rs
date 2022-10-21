@@ -1,5 +1,6 @@
 #![feature(try_trait_v2, type_alias_impl_trait)]
-#![doc = include_str!("../README.md")]
+#![doc = core::include_str!("../README.md")]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "support")]
 pub mod support;
@@ -8,7 +9,6 @@ pub mod support;
 extern crate alloc;
 
 pub use ctrlgen_derive::ctrlgen;
-
 
 pub trait Proxy<Msg> {
     fn send(&self, msg: Msg);

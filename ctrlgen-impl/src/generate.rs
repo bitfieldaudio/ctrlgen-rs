@@ -127,8 +127,8 @@ impl InputData {
 
         let mut cases = TokenStream::new();
 
-        let context_name = q! { __ctrlgen__context };
-        let service_name = q! { __ctrlgen__service };
+        let context_name = q! { __ctrlgen_context };
+        let service_name = q! { __ctrlgen_service };
 
         for method in &self.methods {
             let method_name = &method.name;

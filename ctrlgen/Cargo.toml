@@ -1,6 +1,6 @@
 [package]
 name = "ctrlgen"
-version= "0.3.0"
+version= "0.3.1"
 license.workspace = true
 description.workspace = true
 author.workspace = true

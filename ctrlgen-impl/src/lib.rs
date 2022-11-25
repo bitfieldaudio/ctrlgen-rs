@@ -88,6 +88,7 @@ pub struct Params {
     proxies: Vec<Proxy>,
     enum_attr: Vec<syn::Attribute>,
     enum_name: Ident,
+    context: Option<(syn::Ident, syn::Type)>,
 }
 
 pub mod generate;

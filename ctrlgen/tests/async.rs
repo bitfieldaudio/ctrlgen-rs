@@ -1,6 +1,5 @@
 #![feature(type_alias_impl_trait)]
 
-
 #[derive(Default)]
 struct Service {
     counter: i32,

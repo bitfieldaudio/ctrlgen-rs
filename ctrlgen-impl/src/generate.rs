@@ -15,7 +15,7 @@ fn borrow_toowned() -> TokenStream {
     panic!("Cannot use borrow::ToOwned without either `std` or `alloc` features of ctrlgen")
 }
 
-use crate::{Proxy};
+use crate::Proxy;
 
 use super::InputData;
 impl InputData {
@@ -127,6 +127,9 @@ impl InputData {
 
         let mut cases = TokenStream::new();
 
+        let context_name = q! { __ctrlgen__context };
+        let service_name = q! { __ctrlgen__service };
+
         for method in &self.methods {
             let method_name = &method.name;
             let variant_name = method.variant_name();
@@ -137,12 +140,16 @@ impl InputData {
                     #arg_name,
                 })
             }
-            let call_args = args.clone();
+            let call_args = if self.params.context.is_some() {
+                q! { #context_name, #args }
+            } else {
+                args.clone()
+            };
 
             let func_call = if method.r#async {
-                q! { this.#method_name(#call_args).await }
+                q! { #service_name.#method_name(#call_args).await }
             } else {
-                q! { this.#method_name(#call_args) }
+                q! { #service_name.#method_name(#call_args) }
             };
 
             let mut body = TokenStream::new();
@@ -169,13 +176,21 @@ impl InputData {
         let struct_args = &self.struct_args;
         let where_clause = self.make_where_clause();
 
+        let service_type = q! { #struct_name #struct_args };
+        let context_type = if let Some((_, ctx_type)) = &self.params.context {
+            q! { #ctx_type }
+        } else {
+            q! { () }
+        };
+
         if !is_async {
             q! {
-                impl #impl_generics ::ctrlgen::CallMut < #struct_name #struct_args > for #enum_name
+                impl #impl_generics ::ctrlgen::CallMut < #service_type > for #enum_name
                 #where_clause
                 {
                     type Error = #error_type;
-                    fn call_mut(self, this: &mut #struct_name #struct_args) -> ::core::result::Result<(), Self::Error> {
+                    type Context = #context_type;
+                    fn call_mut_with_ctx(self, #service_name: &mut #service_type, #context_name: Self::Context) -> ::core::result::Result<(), Self::Error> {
                         match self {
                             #cases
                         }
@@ -184,13 +199,14 @@ impl InputData {
             }
         } else {
             q! {
-                impl #impl_generics ::ctrlgen::CallMutAsync < #struct_name #struct_args > for #enum_name
+                impl #impl_generics ::ctrlgen::CallMutAsync < #service_type > for #enum_name
                 #where_clause
                 {
                     type Error = #error_type;
+                    type Context = #context_type;
                     type Future<'__ctrlgen__lifetime> = impl core::future::Future<Output = ::core::result::Result<(), Self::Error>> + '__ctrlgen__lifetime
-                        where #struct_name #struct_args: '__ctrlgen__lifetime;
-                    fn call_mut_async<'__ctrlgen__lifetime>(self, this: &'__ctrlgen__lifetime mut #struct_name #struct_args) -> Self::Future<'__ctrlgen__lifetime> {
+                        where #service_type: '__ctrlgen__lifetime;
+                    fn call_mut_async_with_ctx<'__ctrlgen__lifetime>(self, #service_name: &'__ctrlgen__lifetime mut #service_type, #context_name: Self::Context) -> Self::Future<'__ctrlgen__lifetime> {
                         async move {
                             match self {
                                 #cases
@@ -212,9 +228,7 @@ impl InputData {
 
     pub fn generate_proxy(&self, proxy: &Proxy) -> TokenStream {
         match proxy {
-            crate::Proxy::Trait(kwd, x) => {
-                self.generate_proxy_trait(kwd, x)
-            }
+            crate::Proxy::Trait(kwd, x) => self.generate_proxy_trait(kwd, x),
         }
     }
 
@@ -250,7 +264,7 @@ impl InputData {
                         let ret = <#returnval_trait as ::ctrlgen::Returnval>::create();
                         let msg = #enum_name::#variant_name { #arg_names ret: ret.0 };
                         <Self as ::ctrlgen::Proxy<#enum_name>>::send(self, msg);
-                        <#returnval_trait as ::ctrlgen::Returnval>::recv(ret.1)                        
+                        <#returnval_trait as ::ctrlgen::Returnval>::recv(ret.1)
                     }
                 })
             } else {

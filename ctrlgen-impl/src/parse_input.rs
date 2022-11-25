@@ -50,19 +50,17 @@ impl InputData {
         let mut methods = Vec::with_capacity(item.items.len());
 
         for item in &mut item.items {
-            match item {
-                syn::ImplItem::Method(method) => {
-                    if method.defaultness.is_some() {
-                        panic!("`default` not supported");
-                    }
-
-                    methods.push(parse_method(
-                        &mut method.sig,
-                        &mut method.attrs,
-                        returnval_mode,
-                    )?);
+            if let syn::ImplItem::Method(method) = item {
+                if method.defaultness.is_some() {
+                    panic!("`default` not supported");
                 }
-                _ => (),
+
+                methods.push(parse_method(
+                    &mut method.sig,
+                    &mut method.attrs,
+                    returnval_mode,
+                    &params.context,
+                )?);
             }
         }
 
@@ -80,6 +78,7 @@ fn parse_method(
     method_signature: &mut syn::Signature,
     attrs: &mut Vec<syn::Attribute>,
     returnval_mode: bool,
+    context: &Option<(syn::Ident, syn::Type)>,
 ) -> syn::Result<Method> {
     let mut enum_attr = vec![];
     let mut return_attr = vec![];
@@ -115,7 +114,7 @@ fn parse_method(
     if !returnval_mode && !matches!(method_signature.output, syn::ReturnType::Default) {
         return Err(syn::Error::new_spanned(
             &method_signature.output,
-            "Specify `returnval` parameter to handle methods with return types.",
+            "Specify `returnval` parameter to ctrlgen macro to handle methods with return types.",
         ));
     }
     for a in attrs.iter() {
@@ -143,16 +142,14 @@ fn parse_method(
             _ => (),
         }
     }
-    attrs.retain(|a| match a.path.get_ident() {
-        Some(x) if x == "ctrlgen_enum_attr" || x == "ctrlgen_return_attr" => false,
-        _ => true,
-    });
+    attrs.retain(|a| !matches!(a.path.get_ident(), Some(x) if x == "ctrlgen_enum_attr" || x == "ctrlgen_return_attr"));
     let mut args = Vec::with_capacity(method_signature.inputs.len());
     let mut receiver_style = None;
     let ret = match &method_signature.output {
         syn::ReturnType::Default => None,
         syn::ReturnType::Type(_, t) => Some(*t.clone()),
     };
+    let mut is_first_arg = true;
     for input_args in &mut method_signature.inputs {
         match input_args {
             syn::FnArg::Receiver(r) => {
@@ -173,6 +170,20 @@ fn parse_method(
                 }
             }
             syn::FnArg::Typed(arg) => {
+                if is_first_arg {
+                    is_first_arg = false;
+                    if let Some((ctx_name, _ctx_ty)) = context {
+                        if let syn::Pat::Ident(pat) = &*arg.pat {
+                            let arg_name = &pat.ident;
+                            if *arg_name != ctx_name.to_string() {
+                                return Err(syn::Error::new_spanned(&arg, format!("Expected first argument to be the context {ctx_name}. Got {arg_name}")));
+                            }
+                        }
+                        // We're good, skip this argument.
+                        continue;
+                    }
+                }
+
                 let mut enum_attr = vec![];
                 let mut to_owned = false;
                 for a in attrs.iter() {
@@ -210,10 +221,8 @@ fn parse_method(
                         if pi.by_ref.is_some() {
                             return Err(syn::Error::new_spanned(pi, "ctrlgen does not support `ref` in argument names"));
                         }
-                        if returnval_mode {
-                            if pi.ident.to_string() == "ret" {
-                                return Err(syn::Error::new_spanned(&pi.ident, format!("In `returnval` mode, method's arguments cannot be named literally `ret`. Rename it away in `{}`.", method_signature.ident)));
-                            }
+                        if returnval_mode && pi.ident == "ret" {
+                            return Err(syn::Error::new_spanned(&pi.ident, format!("In `returnval` mode, method's arguments cannot be named literally `ret`. Rename it away in `{}`.", method_signature.ident)));
                         }
                         args.push(Argument { name: pi.ident.clone(), ty: *arg.ty.clone(), enum_attr, to_owned });
                     }
@@ -226,6 +235,12 @@ fn parse_method(
         return Err(syn::Error::new_spanned(
             method_signature,
             "ctrlgen does not support methods that do not accept `self`",
+        ));
+    }
+    if is_first_arg && context.is_some() {
+        return Err(syn::Error::new_spanned(
+            &method_signature,
+            "Every method needs to take the context arg when specified",
         ));
     }
     Ok(Method {

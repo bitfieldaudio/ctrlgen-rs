@@ -12,7 +12,7 @@ impl Parse for Proxy {
         // if input.peek(Token![struct]) {
         //     let _kwd: Token![struct] = input.parse()?;
         //     Ok(Self::Struct(input.parse()?))
-        // } else 
+        // } else
         if input.peek(Token![trait]) {
             let kwd: Token![trait] = input.parse()?;
             Ok(Self::Trait(kwd, input.parse()?))
@@ -46,6 +46,7 @@ impl Parse for Params {
         let enum_name: syn::Ident = input.parse()?;
         let mut returnval = None;
         let mut proxies = Vec::new();
+        let mut context = None;
 
         while input.peek(Token![,]) {
             let _comma: Token![,] = input.parse()?;
@@ -57,7 +58,7 @@ impl Parse for Params {
                 proxies.extend(input.parse());
                 continue;
             }
-            
+
             let arg: syn::Ident = input.parse()?;
             match arg.to_string().as_str() {
                 "enum_attr" => {
@@ -91,6 +92,22 @@ impl Parse for Params {
                         Punctuated::parse_terminated(&contents)?;
                     proxies.extend(punct)
                 }
+                "context" => {
+                    if context.is_some() {
+                        return Err(syn::Error::new_spanned(
+                            arg,
+                            "Argument `context` specified twice",
+                        ));
+                    }
+                    let contents;
+                    let _paren = syn::parenthesized!(contents in input);
+
+                    let ident = contents.parse()?;
+                    let _colon: Token![:] = contents.parse()?;
+                    let ty = contents.parse()?;
+
+                    context = Some((ident, ty))
+                }
                 _ => {
                     return Err(syn::Error::new(
                         arg.span(),
@@ -106,6 +123,7 @@ impl Parse for Params {
             returnval,
             proxies,
             enum_attr,
+            context,
         })
     }
 }

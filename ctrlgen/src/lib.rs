@@ -40,17 +40,50 @@ pub trait AsyncReturnval {
     fn async_recv<T>(rx: Self::Receiver<T>) -> Self::RecvFuture<T>;
 }
 
-pub trait CallMut<Service> {
-    type Error;
-    fn call_mut(self, service: &mut Service) -> core::result::Result<(), Self::Error>;
+pub trait IsUnit {
+    fn new() -> Self;
+}
+impl IsUnit for () {
+    fn new() -> Self {
+        ()
+    }
 }
 
-pub trait CallMutAsync<Service> {
+pub trait CallMut<Service>: Sized {
     type Error;
+    type Context;
+    fn call_mut_with_ctx(
+        self,
+        service: &mut Service,
+        context: Self::Context,
+    ) -> core::result::Result<(), Self::Error>;
+
+    fn call_mut(self, service: &mut Service) -> core::result::Result<(), Self::Error>
+    where
+        Self::Context: IsUnit,
+    {
+        self.call_mut_with_ctx(service, Self::Context::new())
+    }
+}
+
+pub trait CallMutAsync<Service>: Sized {
+    type Error;
+    type Context;
     type Future<'a>: core::future::Future<Output = core::result::Result<(), Self::Error>> + 'a
     where
         Service: 'a;
-    fn call_mut_async(self, service: &mut Service) -> Self::Future<'_>;
+    fn call_mut_async_with_ctx(
+        self,
+        service: &mut Service,
+        context: Self::Context,
+    ) -> Self::Future<'_>;
+
+    fn call_mut_async(self, service: &mut Service) -> Self::Future<'_>
+    where
+        Self::Context: IsUnit,
+    {
+        self.call_mut_async_with_ctx(service, Self::Context::new())
+    }
 }
 
 impl<T, U: 'static> CallMutAsync<T> for U
@@ -58,11 +91,11 @@ where
     U: CallMut<T>,
 {
     type Error = U::Error;
+    type Context = U::Context;
     type Future<'a> = impl core::future::Future<Output = core::result::Result<(), Self::Error>> + 'a
         where T: 'a;
 
-    fn call_mut_async(self, service: &mut T) -> Self::Future<'_> {
-        async { self.call_mut(service) }
+    fn call_mut_async_with_ctx(self, service: &mut T, context: Self::Context) -> Self::Future<'_> {
+        async { self.call_mut_with_ctx(service, context) }
     }
 }
-

@@ -1,7 +1,7 @@
+use futures_lite::pin;
 use std::convert::Infallible;
 use std::task::Poll;
 use tokio::sync::oneshot;
-use futures_lite::pin;
 
 #[derive(Debug)]
 enum Inner<T> {
@@ -98,9 +98,7 @@ impl<T> Promise<T> {
         T: Send + 'static,
     {
         let (tx, res) = Promise::channel();
-        tokio::spawn(async {
-            tx.send(fut.await)
-        });
+        tokio::spawn(async { tx.send(fut.await) });
         res
     }
 

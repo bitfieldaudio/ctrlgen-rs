@@ -34,9 +34,7 @@ fn proxy_trait_impl_proxy() {
     }
 
     let proxy = ServiceProxy1 {
-        service: RefCell::new(Service {
-            counter: 0
-        })
+        service: RefCell::new(Service { counter: 0 }),
     };
 
     proxy.increment_by(2);

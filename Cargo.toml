@@ -12,8 +12,8 @@ description = "Generate enums for message-passing services"
 author = "Tobias Pisani <topisani@hamsterpoison.com>"
 
 [workspace.dependencies]
-ctrlgen-impl = { version = "0.3.0", path = "ctrlgen-impl"}
-ctrlgen-derive = { version = "0.3.0", path = "ctrlgen-derive"}
+ctrlgen-impl = { version = "0.3.2", path = "ctrlgen-impl"}
+ctrlgen-derive = { version = "0.3.2", path = "ctrlgen-derive"}
 
 [profile.dev.package.insta]
 opt-level = 3

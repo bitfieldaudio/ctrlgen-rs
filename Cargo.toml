@@ -13,8 +13,8 @@ author = "Tobias Pisani <mail@topisani.dev>"
 repository = "https://github.com/bitfieldaudio/ctrlgen-rs"
 
 [workspace.dependencies]
-ctrlgen-impl = { version = "0.3.3", path = "ctrlgen-impl"}
-ctrlgen-derive = { version = "0.3.3", path = "ctrlgen-derive"}
+ctrlgen-impl = { version = "0.3.4", path = "ctrlgen-impl"}
+ctrlgen-derive = { version = "0.3.4", path = "ctrlgen-derive"}
 
 [profile.dev.package.insta]
 opt-level = 3

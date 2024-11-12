@@ -1,6 +1,6 @@
 [package]
 name = "ctrlgen-derive"
-version= "0.3.4"
+version= "0.3.5"
 license.workspace = true
 description.workspace = true
 author.workspace = true

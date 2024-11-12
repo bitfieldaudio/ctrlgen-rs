@@ -1,4 +1,3 @@
-#![feature(try_blocks)]
 use convert_case::Casing;
 use proc_macro2::TokenStream;
 use quote::quote as q;

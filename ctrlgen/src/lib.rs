@@ -1,4 +1,4 @@
-#![feature(try_trait_v2, type_alias_impl_trait, impl_trait_in_assoc_type)]
+#![feature(impl_trait_in_assoc_type)]
 #![doc = core::include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -44,9 +44,7 @@ pub trait IsUnit {
     fn new() -> Self;
 }
 impl IsUnit for () {
-    fn new() -> Self {
-        ()
-    }
+    fn new() -> Self {}
 }
 
 pub trait CallMut<Service>: Sized {
@@ -92,8 +90,10 @@ where
 {
     type Error = U::Error;
     type Context = U::Context;
-    type Future<'a> = impl core::future::Future<Output = core::result::Result<(), Self::Error>> + 'a
-        where T: 'a;
+    type Future<'a>
+        = impl core::future::Future<Output = core::result::Result<(), Self::Error>> + 'a
+    where
+        T: 'a;
 
     fn call_mut_async_with_ctx(self, service: &mut T, context: Self::Context) -> Self::Future<'_> {
         async { self.call_mut_with_ctx(service, context) }

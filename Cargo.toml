@@ -9,7 +9,8 @@ resolver = "2"
 [workspace.package]
 license = "MIT"
 description = "Generate enums for message-passing services"
-author = "Tobias Pisani <topisani@hamsterpoison.com>"
+author = "Tobias Pisani <mail@topisani.dev>"
+repository = "https://github.com/bitfieldaudio/ctrlgen-rs"
 
 [workspace.dependencies]
 ctrlgen-impl = { version = "0.3.2", path = "ctrlgen-impl"}

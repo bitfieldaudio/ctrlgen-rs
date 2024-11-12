@@ -1,5 +1,7 @@
 #![feature(impl_trait_in_assoc_type)]
 
+use ctrlgen::CallMutAsync;
+
 #[derive(Default)]
 struct Service {
     counter: i32,

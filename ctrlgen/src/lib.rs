@@ -1,4 +1,5 @@
 #![feature(impl_trait_in_assoc_type)]
+#![feature(try_trait_v2)]
 #![doc = core::include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
